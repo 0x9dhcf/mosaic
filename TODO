@@ -1,0 +1,10 @@
+# 1.0.x
+- multi-heads
+
+# 1.1.x
+- progressive stack
+- keep track of urgent windows (add a MWM atom)A
+
+# x.x.x
+- mouse support?
+- enhance ewmh support? (WM_DELETE and WM_STATE at least)
