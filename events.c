@@ -1,16 +1,16 @@
 /*
  * Copyright (c) 2019 Pierre Evenou
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -311,17 +311,17 @@ void on_client_message(xcb_client_message_event_t *e)
         return;
 
     if (e->type == g_ewmh._NET_ACTIVE_WINDOW &&
-            HAS_PROPERTIES(c, PROPERTY_FOCUSABLE)) {
+            HAS_PROPERTIES(c, PROPERTY_FOCUSABLE))
         xcb_set_input_focus(
                 g_xcb,
                 XCB_INPUT_FOCUS_POINTER_ROOT,
                 c->window,
                 XCB_CURRENT_TIME);
-    }
 
     if (e->type == g_ewmh._NET_WM_STATE) {
-        if (e->data.data32[1] == g_ewmh._NET_WM_STATE_FULLSCREEN) {
-            /* Check if the fullscreen state should be toggled */
+#define STATE(event, atom) (event->data.data32[1] == atom || event->data.data32[2] == atom)
+
+        if (STATE(e, g_ewmh._NET_WM_STATE_FULLSCREEN)) {
             if (c->state != STATE_FULLSCREEN  &&
                     (e->data.data32[0] ==  XCB_EWMH_WM_STATE_ADD ||
                      e->data.data32[0] ==  XCB_EWMH_WM_STATE_TOGGLE))
@@ -330,7 +330,7 @@ void on_client_message(xcb_client_message_event_t *e)
                     (e->data.data32[0] ==  XCB_EWMH_WM_STATE_REMOVE ||
                      e->data.data32[0] ==  XCB_EWMH_WM_STATE_TOGGLE))
                 client_set_fullscreen(c, 0);
-        } else if (e->data.data32[1] == g_ewmh._NET_WM_STATE_DEMANDS_ATTENTION) {
+        } else if (STATE(e,  g_ewmh._NET_WM_STATE_DEMANDS_ATTENTION)) {
             /* Check if the urgent flag must be set */
             if (e->data.data32[0] == XCB_EWMH_WM_STATE_ADD)
                 client_set_urgent(c, 1);
@@ -338,7 +338,7 @@ void on_client_message(xcb_client_message_event_t *e)
                 client_set_urgent(c, 1);
             else if (e->data.data32[0] == XCB_EWMH_WM_STATE_TOGGLE)
                 client_set_urgent(c, c->properties  & PROPERTY_URGENT);
-        } else if (e->data.data32[1] == g_ewmh._NET_WM_STATE_MODAL) {
+        } else if (STATE(e,  g_ewmh._NET_WM_STATE_MODAL)) {
             if (c->state != STATE_FLOATING  &&
                     (e->data.data32[0] ==  XCB_EWMH_WM_STATE_ADD ||
                      e->data.data32[0] ==  XCB_EWMH_WM_STATE_TOGGLE))
@@ -350,6 +350,17 @@ void on_client_message(xcb_client_message_event_t *e)
                  * being set to modal */
                 c->state &= ~STATE_FLOATING;
         }
+#undef STATE
+
+        int count = 0;
+        xcb_atom_t atoms[2];
+
+        if (c->state == STATE_FULLSCREEN)
+            atoms[count++] = g_ewmh._NET_WM_STATE_FULLSCREEN;
+        if (HAS_PROPERTIES(c, PROPERTY_URGENT))
+            atoms[count++] = g_ewmh._NET_WM_STATE_DEMANDS_ATTENTION;
+
+        xcb_ewmh_set_wm_state(&g_ewmh, c->window, count, atoms);
 
         refresh = 1;
     }
@@ -366,14 +377,13 @@ void on_button_press(xcb_button_press_event_t *e)
         return;*/
 
     Client *c = lookup(e->event);
-    if (c && HAS_PROPERTIES(c, PROPERTY_FOCUSABLE)) {
-        DEBUG("FOCUSABLE?????");
+    if (c && HAS_PROPERTIES(c, PROPERTY_FOCUSABLE))
         xcb_set_input_focus(
                 g_xcb,
                 XCB_INPUT_FOCUS_POINTER_ROOT,
                 c->window,
                 XCB_CURRENT_TIME);
-    }
+
     xcb_allow_events(g_xcb, XCB_ALLOW_REPLAY_POINTER, XCB_CURRENT_TIME);
     xcb_flush(g_xcb);
 }
