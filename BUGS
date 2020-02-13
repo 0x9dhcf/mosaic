@@ -1,0 +1,35 @@
+# BUGS
+
+## transient not always center on transient for window
+
+### Reproduce:
+
+    - Open firefox and download a file 
+    - Pop up is not centered
+
+### Resolution:
+
+Check X server request flushing when repositionning transient window.
+
+## Popup window could be 1x1 in size
+
+### Reproduce:
+
+    - Open firefox click on an email adress
+    - The application chooser pop up is centered but 1x1 (resizable though)
+
+### Resolution:
+
+Check X server request flushing when repositionning transient window.
+
+## The event loop is not triggered by quit callback
+
+### Reproduce:
+
+    - Start mwm
+    - Send SIG TERM|KILL
+
+### Resolution:
+
+Check why the set input focus on root is not catched.
+
