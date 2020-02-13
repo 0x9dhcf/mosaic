@@ -80,6 +80,7 @@ typedef struct client {
     xcb_window_t    transient;
     Monitor         *monitor;
     int             tagset;
+    int             saved_tagset;
     struct client   *prev;
     struct client   *next;
 } Client;

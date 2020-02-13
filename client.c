@@ -1,16 +1,16 @@
 /*
  * Copyright (c) 2019 Pierre Evenou
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -516,10 +516,13 @@ void client_set_fullscreen(Client *client, int fullscreen)
         client->border_width = 0;
         client->saved_state = client->state;
         client->state = STATE_FULLSCREEN;
+        client->saved_tagset = client->tagset;
+        client->tagset = 0; /* visible on all monitor's tags */
     } else {
         client->state = client->saved_state;
+        client->tagset = client->saved_tagset;
         client->border_width = g_border_width;
-   }
+    }
 }
 
 void client_set_urgent(Client *client, int urgent)
@@ -568,3 +571,5 @@ Client *client_previous(Client *client, State state, Property properties)
 
     return NULL;
 }
+
+#undef CLIENT_MATCH_STATE_AND_PROPERTIES

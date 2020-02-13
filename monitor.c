@@ -350,6 +350,7 @@ void monitor_render(Monitor *monitor)
 
     /* display clients */
     for (Client *c = monitor->head; c; c = c->next) {
+        /* if we have some fullscreen, display only those */
         if (fullscreen && c->state != STATE_FULLSCREEN)
             continue;
         if (! IS_FIXED(c))

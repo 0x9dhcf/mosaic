@@ -1099,6 +1099,10 @@ void focused_client_set_tag(int tag)
 {
     CHECK_FOCUSED
 
+    /* do not change tagset of fullscreen client */
+    if (focused_client->state == STATE_FULLSCREEN)
+        return;
+
     for (int i = 0; i < 32; ++i)
         if (focused_client->tagset & (1L << i))
             focused_monitor->tags[i]--;
@@ -1119,6 +1123,10 @@ void focused_client_set_tag(int tag)
 void focused_client_toggle_tag(int tag)
 {
     CHECK_FOCUSED
+    /* do not change tagset of fullscreen client */
+    if (focused_client->state == STATE_FULLSCREEN)
+        return;
+
     if (focused_client->tagset & (1L << (tag - 1))) {
         focused_client->tagset &= ~(1L << (tag - 1));
         if (! --focused_monitor->tags[tag - 1])
