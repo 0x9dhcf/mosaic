@@ -25,9 +25,9 @@
 
 #include <xcb/xcb.h>
 
-typedef struct client Client;
+typedef struct _Client Client;
 
-typedef enum layout {
+typedef enum _Layout {
     LT_NONE,
     LT_TOP,
     LT_LEFT,
@@ -35,21 +35,21 @@ typedef enum layout {
     LT_RIGHT
 } Layout;
 
-typedef struct monitor {
-    char            name[128];
-    int             x;
-    int             y;
-    int             width;
-    int             height;
-    Layout        layout;
-    float           split;
-    int             mains;
-    int             tags[32];
-    int             tagset;
-    Client        *head;
-    Client        *tail;
-    struct monitor  *next;
-    struct monitor  *prev;
+typedef struct _Monitor {
+    char                name[128];
+    int                 x;
+    int                 y;
+    int                 width;
+    int                 height;
+    Layout              layout;
+    float               split;
+    int                 mains;
+    int                 tags[32];
+    int                 tagset;
+    Client              *head;
+    Client              *tail;
+    struct _Monitor     *next;
+    struct _Monitor     *prev;
 } Monitor;
 
 void monitor_initialize(Monitor *monitor, const char *name, int x, int y, int width, int height);

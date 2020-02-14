@@ -138,9 +138,9 @@ Shortcut g_shortcuts[] = {
 
 Rule g_rules[] = {
     /* class                instance            TAGSET      State */
-    { "Gnome-calculator",   "gnome-calculor",   -1,         STATE_FLOATING },
-    { "Xephyr",             "Xephyr",           -1,         STATE_FLOATING },
-    { "Xmessage",           "xmessage",         -1,         STATE_FLOATING },
+    { "Gnome-calculator",   "gnome-calculor",   -1,         MODE_FLOATING },
+    { "Xephyr",             "Xephyr",           -1,         MODE_FLOATING },
+    { "Xmessage",           "xmessage",         -1,         MODE_FLOATING },
     { NULL, NULL, 0, 0 }
 };
 
@@ -157,7 +157,7 @@ static void usage();
 static void version();
 
 /* static variables */
-static const char *atom_names[MWM_COUNT] = {
+static const char *atom_names[MWM_ATOM_COUNT] = {
     "WM_TAKE_FOCUS",
     "MWM_MONITOR_TAGS",
     "MWM_MONITOR_TAGSET",
@@ -207,15 +207,15 @@ void setup_xcb()
 
 void setup_atoms()
 {
-    xcb_intern_atom_cookie_t cookies[MWM_COUNT];
-    for (int i = 0; i < MWM_COUNT; ++i)
+    xcb_intern_atom_cookie_t cookies[MWM_ATOM_COUNT];
+    for (int i = 0; i < MWM_ATOM_COUNT; ++i)
         cookies[i] = xcb_intern_atom(
                 g_xcb,
                 0,
                 strlen(atom_names[i]),
                 atom_names[i]);
 
-    for (int i = 0; i < MWM_COUNT; ++i) {
+    for (int i = 0; i < MWM_ATOM_COUNT; ++i) {
         xcb_intern_atom_reply_t *a = xcb_intern_atom_reply(
                 g_xcb,
                 cookies[i],
@@ -441,16 +441,16 @@ void check_focus_consistency()
     if (focused_client &&
             focused_client->monitor == focused_monitor &&
             IS_VISIBLE(focused_client) &&
-            HAS_PROPERTIES(focused_client, PROPERTY_FOCUSABLE))
+            IS_CLIENT_STATE(focused_client, STATE_FOCUSABLE))
         return; /* everything is fine with the focus */
 
     /* focus the first focusable client of the focused monitor */
     Client *f = focused_monitor->head;
 
-    if (f && (! IS_VISIBLE(f) || ! HAS_PROPERTIES(f, PROPERTY_FOCUSABLE)))
-        f = client_next(f, STATE_ANY, PROPERTY_FOCUSABLE);
+    if (f && (! IS_VISIBLE(f) || ! IS_CLIENT_STATE(f, STATE_FOCUSABLE)))
+        f = client_next(f, MODE_ANY, STATE_FOCUSABLE);
 
-    if (! f || (! IS_VISIBLE(f) || ! HAS_PROPERTIES(f, PROPERTY_FOCUSABLE))) {
+    if (! f || (! IS_VISIBLE(f) || ! IS_CLIENT_STATE(f, STATE_FOCUSABLE))) {
         focused_client = NULL;
         xcb_set_input_focus(
                 g_xcb,
@@ -582,17 +582,6 @@ void trap(int sig)
     quit();
 }
 
-/*
-static void color(const char *hex, unsigned int *color)
-{
-    if (hex[0] != '#' || strlen(hex) != 7) {
-        INFO("wrong color format: %s", hex);
-        return;
-    }
-    *color = (unsigned int)strtoul(hex+1, NULL, 16);
-}
-*/
-
 void usage()
 {
     printf("minimal window manager %s\n", VERSION);
@@ -612,6 +601,7 @@ void quit()
 {
     running = 0;
     /* send the focus to the root window to trigger the loop event */
+    /* XXX: does not trigger the loop??? */
     xcb_set_input_focus(
             g_xcb,
             XCB_INPUT_FOCUS_POINTER_ROOT,
@@ -640,7 +630,7 @@ void manage(xcb_window_t window)
         hints_set_monitor(focused_monitor);
     }
 
-    if (HAS_PROPERTIES(c, PROPERTY_FOCUSABLE))
+    if (IS_CLIENT_STATE(c, STATE_FOCUSABLE))
         xcb_set_input_focus(
                 g_xcb,
                 XCB_INPUT_FOCUS_POINTER_ROOT,
@@ -748,7 +738,7 @@ void focus_next_client()
 {
     CHECK_FOCUSED
 
-    Client *c = client_next(focused_client, STATE_ANY, PROPERTY_FOCUSABLE);
+    Client *c = client_next(focused_client, MODE_ANY, STATE_FOCUSABLE);
     if (c) {
         xcb_set_input_focus(
                 g_xcb,
@@ -765,7 +755,7 @@ void focus_previous_client()
 {
     CHECK_FOCUSED
 
-    Client *c = client_previous(focused_client, STATE_ANY, PROPERTY_FOCUSABLE);
+    Client *c = client_previous(focused_client, MODE_ANY, STATE_FOCUSABLE);
     if (c) {
         xcb_set_input_focus(
                 g_xcb,
@@ -867,12 +857,12 @@ void focused_client_toggle_mode()
 {
     CHECK_FOCUSED
 
-    if (focused_client->state == STATE_FULLSCREEN ||
-            ! HAS_PROPERTIES(focused_client, PROPERTY_RESIZABLE))
+    if (IS_CLIENT_STATE(focused_client, STATE_FULLSCREEN) || 
+            IS_CLIENT_STATE(focused_client, STATE_STICKY)) 
         return;
 
-    focused_client->state = focused_client->state == STATE_FLOATING ?
-            STATE_TILED : STATE_FLOATING;
+    focused_client->mode = focused_client->mode == MODE_FLOATING ?
+            MODE_TILED : MODE_FLOATING;
 
     monitor_render(focused_client->monitor);
     xcb_flush(g_xcb);
@@ -889,8 +879,9 @@ void focused_client_toggle_mode()
     (c1)->f_height = (c2)->t_height;\
     (c1)->border_width = (c2)->border_width;\
     (c1)->border_color = (c2)->border_color;\
+    (c1)->mode = (c2)->mode;\
+    (c1)->saved_mode = (c2)->saved_mode;\
     (c1)->state = (c2)->state;\
-    (c1)->properties = (c2)->properties;\
     (c1)->reserved_top = (c2)->reserved_top;\
     (c1)->reserved_bottom = (c2)->reserved_bottom;\
     (c1)->reserved_left = (c2)->reserved_left;\
@@ -928,11 +919,11 @@ void focused_client_move_up()
 {
     CHECK_FOCUSED
 
-    if (focused_client->state == STATE_FLOATING) {
+    if (focused_client->mode == MODE_FLOATING) {
         focused_client->f_y -= MOVE_INC;
         client_show(focused_client);
     } else {
-        Client *c = client_previous(focused_client, STATE_TILED, PROPERTY_ANY);
+        Client *c = client_previous(focused_client, MODE_TILED, STATE_ANY);
         if (c)
             swap(focused_client, c);
     }
@@ -944,11 +935,11 @@ void focused_client_move_down()
 {
     CHECK_FOCUSED
 
-    if (focused_client->state == STATE_FLOATING) {
+    if (focused_client->mode == MODE_FLOATING) {
         focused_client->f_y += MOVE_INC;
         client_show(focused_client);
     } else {
-        Client *c = client_next(focused_client, STATE_TILED, PROPERTY_ANY);
+        Client *c = client_next(focused_client, MODE_TILED, STATE_ANY);
         if (c)
             swap(focused_client, c);
     }
@@ -960,11 +951,11 @@ void focused_client_move_left()
 {
     CHECK_FOCUSED
 
-    if (focused_client->state == STATE_FLOATING) {
+    if (focused_client->mode == MODE_FLOATING) {
         focused_client->f_x -= MOVE_INC;
         client_show(focused_client);
     } else {
-        Client *c = client_previous(focused_client, STATE_TILED, PROPERTY_ANY);
+        Client *c = client_previous(focused_client, MODE_TILED, STATE_ANY);
         if (c)
             swap(focused_client, c);
     }
@@ -976,11 +967,11 @@ void focused_client_move_right()
 {
     CHECK_FOCUSED
 
-    if (focused_client->state == STATE_FLOATING) {
+    if (focused_client->mode == MODE_FLOATING) {
         focused_client->f_x += MOVE_INC;
         client_show(focused_client);
     } else {
-        Client *c = client_next(focused_client, STATE_TILED, PROPERTY_ANY);
+        Client *c = client_next(focused_client, MODE_TILED, STATE_ANY);
         if (c)
             swap(focused_client, c);
     }
@@ -1027,7 +1018,7 @@ void focused_client_increase_width()
 {
     CHECK_FOCUSED
 
-    if (focused_client->state == STATE_FLOATING) {
+    if (focused_client->mode == MODE_FLOATING) {
         focused_client->f_width += SIZE_INC;
         client_apply_size_hints(focused_client); /* TODO: return if no change */
         client_show(focused_client);
@@ -1045,7 +1036,7 @@ void focused_client_decrease_width()
 {
     CHECK_FOCUSED
 
-    if (focused_client->state == STATE_FLOATING) {
+    if (focused_client->mode == MODE_FLOATING) {
         focused_client->f_width -= SIZE_INC;
         client_apply_size_hints(focused_client); /* TODO: return if no change */
         client_show(focused_client);
@@ -1063,7 +1054,7 @@ void focused_client_increase_height()
 {
     CHECK_FOCUSED
 
-    if (focused_client->state == STATE_FLOATING) {
+    if (focused_client->mode == MODE_FLOATING) {
         focused_client->f_height += SIZE_INC;
         client_apply_size_hints(focused_client); /* TODO: return if no change */
         client_show(focused_client);
@@ -1081,7 +1072,7 @@ void focused_client_decrease_height()
 {
     CHECK_FOCUSED
 
-    if (focused_client->state == STATE_FLOATING) {
+    if (focused_client->mode == MODE_FLOATING) {
         focused_client->f_height -= SIZE_INC;
         client_apply_size_hints(focused_client); /* TODO: return if no change */
         client_show(focused_client);
@@ -1100,7 +1091,7 @@ void focused_client_set_tag(int tag)
     CHECK_FOCUSED
 
     /* do not change tagset of fullscreen client */
-    if (focused_client->state == STATE_FULLSCREEN)
+    if (IS_CLIENT_STATE(focused_client, STATE_FULLSCREEN))
         return;
 
     for (int i = 0; i < 32; ++i)
@@ -1124,7 +1115,7 @@ void focused_client_toggle_tag(int tag)
 {
     CHECK_FOCUSED
     /* do not change tagset of fullscreen client */
-    if (focused_client->state == STATE_FULLSCREEN)
+    if (IS_CLIENT_STATE(focused_client, STATE_FULLSCREEN))
         return;
 
     if (focused_client->tagset & (1L << (tag - 1))) {

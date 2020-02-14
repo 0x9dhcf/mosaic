@@ -55,9 +55,9 @@ void client_initialize(Client *client, xcb_window_t window)
     client->t_height = client->f_height = 1;
     client->border_width = g_border_width;
     client->border_color = g_normal_color;
-    client->state = STATE_TILED;
-    client->saved_state = STATE_TILED;
-    client->properties = PROPERTY_FOCUSABLE | PROPERTY_RESIZABLE;
+    client->mode = MODE_TILED;
+    client->saved_mode = MODE_TILED;
+    client->state = STATE_FOCUSABLE;
     client->reserved_top = 0;
     client->reserved_bottom = 0;
     client->reserved_left = 0;
@@ -110,7 +110,9 @@ void client_initialize(Client *client, xcb_window_t window)
             NULL);
 
     if (transient && xcb_get_property_value_length(transient) != 0) {
-        xcb_icccm_get_wm_transient_for_from_reply(&client->transient, transient);
+        xcb_icccm_get_wm_transient_for_from_reply(
+                &client->transient,
+                transient);
         free(transient);
     }
 
@@ -127,8 +129,6 @@ void client_initialize(Client *client, xcb_window_t window)
                 XCB_EVENT_MASK_STRUCTURE_NOTIFY });
 
     /* grab buttons, clicks should focus windows */
-    xcb_void_cookie_t xcb_grab_button(xcb_connection_t *conn, uint8_t owner_events, xcb_window_t grab_window, uint16_t event_mask, uint8_t pointer_mode, uint8_t keyboard_mode, xcb_window_t confine_to, xcb_cursor_t cursor, uint8_t button, uint16_t modifiers);
-
     xcb_grab_button(
             g_xcb,
             1,
@@ -161,7 +161,7 @@ void client_initialize(Client *client, xcb_window_t window)
             if ((g_rules[i].instance_name && strcmp(g_rules[i].instance_name, instance) == 0) ||
                 (g_rules[i].class_name && strcmp(g_rules[i].class_name, class) == 0)) {
                 client->tagset = g_rules[i].tags;
-                client->state = g_rules[i].state;
+                client->mode = g_rules[i].mode;
             }
             i++;
         }
@@ -174,6 +174,52 @@ void client_initialize(Client *client, xcb_window_t window)
     client_update_size_hints(client);
     client_update_wm_hints(client);
     client_update_window_type(client);
+}
+
+void client_set_focusable(Client *client, int focusable)
+{
+    if (focusable)
+        CLIENT_SET_STATE(client, STATE_FOCUSABLE);
+    else
+        CLIENT_UNSET_STATE(client, STATE_FOCUSABLE);
+}
+
+void client_set_sticky(Client *client, int sticky)
+{
+    if (sticky)
+        CLIENT_SET_STATE(client, STATE_STICKY);
+    else
+        CLIENT_UNSET_STATE(client, STATE_STICKY);
+}
+
+void client_set_fullscreen(Client *client, int fullscreen)
+{
+    if (fullscreen) {
+        client->border_width = 0;
+        client->saved_mode = client->mode;
+        client->saved_tagset = client->tagset;
+        client->tagset = 0; /* visible on all monitor's tags */
+        CLIENT_SET_STATE(client, STATE_FULLSCREEN);
+    } else {
+        client->mode = client->saved_mode;
+        client->tagset = client->saved_tagset;
+        client->border_width = g_border_width;
+        CLIENT_UNSET_STATE(client, STATE_FULLSCREEN);
+    }
+}
+
+void client_set_urgency(Client *client, int urgency)
+{
+    if (urgency)
+        CLIENT_SET_STATE(client, STATE_URGENT);
+    else
+        CLIENT_UNSET_STATE(client, STATE_URGENT);
+
+    xcb_change_window_attributes(
+            g_xcb,
+            client->window,
+            XCB_CW_BORDER_PIXEL,
+            (unsigned int []) { urgency ?  g_urgent_color : g_normal_color });
 }
 
 void client_hide(Client *client)
@@ -204,33 +250,35 @@ void client_show(Client *client)
 {
     if (IS_VISIBLE(client)) {
         int x, y, w, h;
-        if (client->state == STATE_TILED) {
-            x = client->t_x;
-            y = client->t_y;
-            w = client->t_width;
-            h = client->t_height;
-        } else if (client->state == STATE_FLOATING) {
-            if (client->transient) {
-                Client *t = lookup(client->transient);
-                if (t) { /* transient for might be closed yet */
-                    if (t->state == STATE_TILED) {
-                        client->f_x = (t->t_x + t->t_width / 2) - client->f_width / 2;
-                        client->f_y = (t->t_y + t->t_height / 2) - client->f_height / 2;
-                    } else {
-                        client->f_x = (t->f_x + t->f_width / 2) - client->f_width / 2;
-                        client->f_y = (t->f_y + t->f_height / 2) - client->f_height / 2;
-                    }
-                }
-            }
-            x = client->f_x;
-            y = client->f_y;
-            w = client->f_width;
-            h = client->f_height;
-        } else { /* STATE_FULLSCREEN */
+        if (IS_CLIENT_STATE(client, STATE_FULLSCREEN)) {
             x = client->monitor->x;
             y = client->monitor->y;
             w = client->monitor->width;
             h = client->monitor->height;
+        } else {
+            if (client->mode == MODE_TILED) {
+                x = client->t_x;
+                y = client->t_y;
+                w = client->t_width;
+                h = client->t_height;
+            } else { /* MODE_FLOATING */
+                if (client->transient) {
+                    Client *t = lookup(client->transient);
+                    if (t) { /* transient for might be closed yet */
+                        if (t->mode == MODE_TILED) {
+                            client->f_x = (t->t_x + t->t_width / 2) - client->f_width / 2;
+                            client->f_y = (t->t_y + t->t_height / 2) - client->f_height / 2;
+                        } else {
+                            client->f_x = (t->f_x + t->f_width / 2) - client->f_width / 2;
+                            client->f_y = (t->f_y + t->f_height / 2) - client->f_height / 2;
+                        }
+                    }
+                }
+                x = client->f_x;
+                y = client->f_y;
+                w = client->f_width;
+                h = client->f_height;
+            }
         }
 
         /*
@@ -262,8 +310,9 @@ void client_show(Client *client)
                     x, y,
                     w, h,
                     client->border_width,
-                    client->state == STATE_TILED ?
-                            XCB_STACK_MODE_BELOW : XCB_STACK_MODE_ABOVE });
+                    client->mode == MODE_FLOATING ||
+                            IS_CLIENT_STATE(client, STATE_FULLSCREEN) ?
+                            XCB_STACK_MODE_ABOVE : XCB_STACK_MODE_BELOW });
 
         xcb_ungrab_pointer(g_xcb, XCB_CURRENT_TIME);
     }
@@ -271,7 +320,7 @@ void client_show(Client *client)
 
 void client_apply_size_hints(Client *client)
 {
-    if (client->state == STATE_FULLSCREEN)
+    if (IS_CLIENT_STATE(client, STATE_FULLSCREEN))
         return;
 
     /* Handle the size aspect ratio */
@@ -346,7 +395,7 @@ int client_update_size_hints(Client *client)
         return 0;
     }
 
-    client->properties |= PROPERTY_RESIZABLE;
+    client_set_sticky(client, 0);
     client->base_width = client->base_height = 0;
     client->width_increment = client->height_increment = 0;
     client->max_width = client->max_height = 0;
@@ -414,7 +463,7 @@ int client_update_size_hints(Client *client)
         if (client->max_width && client->max_height &&
                 client->max_width == client->min_width &&
                 client->max_height == client->min_height)
-            client->properties &= ~PROPERTY_RESIZABLE;
+            client_set_sticky(client, 1);
         refresh = 1;
     }
 
@@ -436,16 +485,16 @@ int client_update_wm_hints(Client *client)
         return 0;
     }
 
-    client->properties |= PROPERTY_FOCUSABLE;
-    client->properties &= ~PROPERTY_URGENT;
+    client_set_focusable(client, 1);
+    client_set_urgency(client, 0);
 
     if (xcb_get_property_value_length(hints) != 0) {
         xcb_icccm_wm_hints_t wm_hints;
         if (xcb_icccm_get_wm_hints_from_reply(&wm_hints, hints)) {
             if (wm_hints.flags & XCB_ICCCM_WM_HINT_INPUT && ! wm_hints.input)
-                client->properties &= ~PROPERTY_FOCUSABLE;
+                client_set_focusable(client, 0);
             if (xcb_icccm_wm_hints_get_urgency(&wm_hints))
-                client->properties |= PROPERTY_URGENT;
+                client_set_urgency(client, 1);
             refresh = 1;
         }
     }
@@ -474,19 +523,19 @@ int client_update_window_type(Client *client)
         return 0;
     }
 
-    if (client->state != STATE_FLOATING &&
+    if (client->mode != MODE_FLOATING &&
             (xcb_reply_contains_atom(type, g_ewmh._NET_WM_WINDOW_TYPE_DIALOG) ||
              xcb_reply_contains_atom(type, g_ewmh._NET_WM_WINDOW_TYPE_UTILITY) ||
              xcb_reply_contains_atom(type, g_ewmh._NET_WM_WINDOW_TYPE_TOOLBAR) ||
              xcb_reply_contains_atom(type, g_ewmh._NET_WM_WINDOW_TYPE_SPLASH))) {
-        client->state = STATE_FLOATING;
+        client->mode = MODE_FLOATING;
         refresh = 1;
     }
 
     if (xcb_reply_contains_atom(type, g_ewmh._NET_WM_WINDOW_TYPE_DOCK)) {
-        client->state = STATE_FLOATING;
-        client->properties &= ~PROPERTY_FOCUSABLE;
-        client->properties &= ~PROPERTY_RESIZABLE;
+        client->mode = MODE_FLOATING;
+        client_set_focusable(client, 0);
+        client_set_sticky(client, 1);
         client->border_width = 0;
         client->tagset = 0;
     }
@@ -502,7 +551,7 @@ void client_set_focused(Client *client, int focus)
             client->window,
             XCB_CW_BORDER_PIXEL,
             (unsigned int []) { focus ?  g_focused_color : g_normal_color });
-    if (focus && (client->monitor->layout == LT_NONE || client->state != STATE_TILED))
+    if (focus && (client->monitor->layout == LT_NONE || client->mode != MODE_TILED))
         xcb_configure_window (
                 g_xcb,
                 client->window,
@@ -510,66 +559,37 @@ void client_set_focused(Client *client, int focus)
                 (const unsigned int[]) { XCB_STACK_MODE_ABOVE });
 }
 
-void client_set_fullscreen(Client *client, int fullscreen)
-{
-    if (fullscreen) {
-        client->border_width = 0;
-        client->saved_state = client->state;
-        client->state = STATE_FULLSCREEN;
-        client->saved_tagset = client->tagset;
-        client->tagset = 0; /* visible on all monitor's tags */
-    } else {
-        client->state = client->saved_state;
-        client->tagset = client->saved_tagset;
-        client->border_width = g_border_width;
-    }
-}
+#define CLIENT_MATCH_MODE_AND_STATE(c, m, s)\
+        ((m == MODE_ANY || c->mode == m) && IS_CLIENT_STATE(c, s) && IS_VISIBLE(c))
 
-void client_set_urgent(Client *client, int urgent)
-{
-    if (urgent)
-        client->properties |= PROPERTY_URGENT;
-    else
-        client->properties &= ~PROPERTY_URGENT;
-
-    xcb_change_window_attributes(
-            g_xcb,
-            client->window,
-            XCB_CW_BORDER_PIXEL,
-            (unsigned int []) { urgent ?  g_urgent_color : g_normal_color });
-}
-
-#define CLIENT_MATCH_STATE_AND_PROPERTIES(c, s, p)\
-        ((s == STATE_ANY || c->state == s) && HAS_PROPERTIES(c, p) && IS_VISIBLE(c))
-
-Client *client_next(Client *client, State state, Property properties)
+Client *client_next(Client *client, Mode mode, State state)
 {
     /* find the first successor matching */
     for (Client *c = client->next; c; c = c->next)
-        if (CLIENT_MATCH_STATE_AND_PROPERTIES(c, state, properties))
+        if (CLIENT_MATCH_MODE_AND_STATE(c, mode, state))
             return c;
 
     /* if not found then find the first one matching from the head */
     for (Client *c = client->monitor->head; c && c != client; c = c->next)
-        if (CLIENT_MATCH_STATE_AND_PROPERTIES(c, state, properties))
+        if (CLIENT_MATCH_MODE_AND_STATE(c, mode, state))
             return c;
 
     return NULL;
 }
 
-Client *client_previous(Client *client, State state, Property properties)
+Client *client_previous(Client *client, Mode mode, State state)
 {
     /* find the first ancestor matching */
     for (Client *c = client->prev; c; c = c->prev)
-        if (CLIENT_MATCH_STATE_AND_PROPERTIES(c, state, properties))
+        if (CLIENT_MATCH_MODE_AND_STATE(c, mode, state))
             return c;
 
     /* if not found then find the first one matching from the tail */
     for (Client *c = client->monitor->tail; c && c != client; c = c->prev)
-        if (CLIENT_MATCH_STATE_AND_PROPERTIES(c, state, properties))
+        if (CLIENT_MATCH_MODE_AND_STATE(c, mode, state))
             return c;
 
     return NULL;
 }
 
-#undef CLIENT_MATCH_STATE_AND_PROPERTIES
+#undef CLIENT_MATCH_MODE_AND_STATE

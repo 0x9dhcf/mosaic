@@ -1,16 +1,16 @@
 /*
  * Copyright (c) 2019 Pierre Evenou
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -39,7 +39,7 @@ static void apply_none_layout(Monitor *m, int w_x, int w_y, int w_w, int w_h)
 {
     Client *c;
     for (c = m->head; c; c = c->next)
-        if (c->state == STATE_TILED && c->tagset & m->tagset) {
+        if (c->mode == MODE_TILED && c->tagset & m->tagset) {
             c->t_x = w_x;
             c->t_y = w_y;
             c->t_width = w_w - 2 * c->border_width;
@@ -58,7 +58,7 @@ static void horizontal_layout(
     /* tile the main views */
     Client *c;
     for (c = m->head; c && tiled < mains; c = c->next) {
-        if (c->state == STATE_TILED && IS_VISIBLE(c)) {
+        if (c->mode == MODE_TILED && IS_VISIBLE(c)) {
             c->t_x = main_x;
             c->t_y = main_y;
             c->t_width = main_w - 2 * c->border_width;
@@ -71,7 +71,7 @@ static void horizontal_layout(
     /* tile the stack */
     tiled = 0;
     for (; c && tiled < stacked; c = c->next) {
-        if (c->state == STATE_TILED && IS_VISIBLE(c)) {
+        if (c->mode == MODE_TILED && IS_VISIBLE(c)) {
             c->t_x = stack_x;
             c->t_y = stack_y;
             c->t_width = stack_w - 2 * c->border_width;
@@ -144,7 +144,7 @@ static void vertical_layout(
     /* tile the main views */
     Client *c;
     for (c = m->head; c && tiled < mains; c = c->next) {
-        if (c->state == STATE_TILED && IS_VISIBLE(c)) {
+        if (c->mode == MODE_TILED && IS_VISIBLE(c)) {
             c->t_x = main_x;
             c->t_y = main_y;
             c->t_width = main_w - 2 * c->border_width;
@@ -157,7 +157,7 @@ static void vertical_layout(
     /* tile the stack */
     tiled = 0;
     for (; c && tiled < stacked; c = c->next) {
-        if (c->state == STATE_TILED && IS_VISIBLE(c)) {
+        if (c->mode == MODE_TILED && IS_VISIBLE(c)) {
             c->t_x = stack_x;
             c->t_y = stack_y;
             c->t_width = stack_w - 2 * c->border_width;
@@ -240,8 +240,7 @@ void monitor_initialize(Monitor *monitor, const char *name, int x, int y, int wi
 void monitor_attach(Monitor *monitor, Client *client)
 {
     client->monitor = monitor;
-    if (HAS_PROPERTIES(client, PROPERTY_FOCUSABLE) ||
-            HAS_PROPERTIES(client, PROPERTY_RESIZABLE)) {
+    if (IS_CLIENT_STATE_NOT(client, STATE_STICKY)) {
         if (client->tagset < 0)
             client->tagset = monitor->tagset;
         for (int i = 0; i < 32; ++i)
@@ -262,7 +261,7 @@ void monitor_attach(Monitor *monitor, Client *client)
 
     /* default policy for floatings other than fixed
      * is to be centered on the monitor */
-    if (HAS_PROPERTIES(client, PROPERTY_RESIZABLE)) {
+    if (IS_CLIENT_STATE_NOT(client, STATE_STICKY)) {
         client->f_x = monitor->x + (monitor->width - client->f_width) / 2;
         client->f_y = monitor->y + (monitor->height - client->f_height) / 2;
     }
@@ -301,14 +300,14 @@ void monitor_render(Monitor *monitor)
 
     /* first round to get information about clients */
     for (Client *c = monitor->head; c; c = c->next) {
-        if (c->state == STATE_FULLSCREEN)
+        if (IS_CLIENT_STATE(c, STATE_FULLSCREEN))
             fullscreen++;
 
         /* do not hide transient nor fixed */
-        if (! c->transient && ! IS_FIXED(c))
+        if (! c->transient && IS_CLIENT_STATE_NOT(c, STATE_STICKY))
             client_hide(c);
 
-        if (c->state == STATE_TILED && IS_VISIBLE(c))
+        if (c->mode == MODE_TILED && IS_VISIBLE(c))
             tilables++;
 
         /* XXX: the client position should be considered
@@ -327,6 +326,11 @@ void monitor_render(Monitor *monitor)
 
     int mains = tilables < monitor->mains ? tilables : monitor->mains;
     int stacked = (tilables - mains) > 0 ? (tilables - mains ) : 0;
+
+    DEBUG("tilables: %d", tilables);
+    DEBUG("mains: %d", mains);
+    DEBUG("stacked: %d", stacked);
+    DEBUG("fullscreen: %d", fullscreen);
     /* compute tiles positions */
     if (tilables && !fullscreen) {
         switch(monitor->layout) {
@@ -351,9 +355,9 @@ void monitor_render(Monitor *monitor)
     /* display clients */
     for (Client *c = monitor->head; c; c = c->next) {
         /* if we have some fullscreen, display only those */
-        if (fullscreen && c->state != STATE_FULLSCREEN)
+        if (fullscreen && IS_CLIENT_STATE_NOT(c, STATE_FULLSCREEN))
             continue;
-        if (! IS_FIXED(c))
+        if (IS_CLIENT_STATE_NOT(c, STATE_STICKY))
             client_show(c);
     }
 }
@@ -362,7 +366,7 @@ int monitor_increase_main_views(Monitor *monitor)
 {
     int tilables = 0;
     for (Client *c = monitor->head; c; c = c->next)
-        if (c->state == STATE_TILED && IS_VISIBLE(c))
+        if (c->mode == MODE_TILED && IS_VISIBLE(c))
                 tilables++;
 
     if (tilables > monitor->mains) {
