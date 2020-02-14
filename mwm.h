@@ -55,7 +55,7 @@ enum {
     MWM_MONITOR_TAGSET,
     MWM_FOCUSED,
     MWM_FOCUSED_TAGSET,
-    MWM_COUNT
+    MWM_ATOM_COUNT
 };
 
 enum  {
@@ -80,7 +80,7 @@ typedef struct rule {
     char *class_name;
     char *instance_name;
     int tags;
-    State state;
+    Mode mode;
 } Rule;
 
 /* xcb context */
@@ -90,7 +90,7 @@ xcb_screen_t           *g_screen;
 xcb_window_t            g_root;
 xcb_visualtype_t       *g_visual;
 xcb_ewmh_connection_t   g_ewmh;
-xcb_atom_t              g_atoms[MWM_COUNT];
+xcb_atom_t              g_atoms[MWM_ATOM_COUNT];
 struct xkb_state       *g_xkb_state;
 
 /* static configuration */

@@ -23,8 +23,8 @@
 #ifndef __MWM_HINTS_H__
 #define __MWM_HINTS_H__
 
-typedef struct monitor Monitor;
-typedef struct client Client;
+typedef struct _Monitor Monitor;
+typedef struct _Client Client;
 
 void hints_set_monitor(Monitor *monitor);
 void hints_set_focused(Client *client);

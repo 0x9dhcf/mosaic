@@ -1,16 +1,16 @@
 /*
  * Copyright (c) 2019 Pierre Evenou
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -27,8 +27,9 @@
 #include <xcb/xcb_icccm.h>
 #include <xcb/xcb_ewmh.h>
 
-typedef struct monitor Monitor;
+typedef struct _Monitor Monitor;
 
+/*
 typedef enum state {
     STATE_ANY,
     STATE_TILED,
@@ -48,7 +49,23 @@ typedef int Property;
 #define IS_FIXED(c) (c->state == STATE_FLOATING && \
         ! HAS_PROPERTIES(c, PROPERTY_RESIZABLE & PROPERTY_FOCUSABLE))
 
-typedef struct client {
+*/
+
+typedef enum _Mode {
+    MODE_ANY,
+    MODE_TILED,
+    MODE_FLOATING
+} Mode;
+
+typedef int State;
+
+#define STATE_ANY           0x00
+#define STATE_FOCUSABLE     0x01
+#define STATE_STICKY        0x02
+#define STATE_FULLSCREEN    0x04
+#define STATE_URGENT        0x08
+
+typedef struct _Client {
     xcb_window_t    window;
     int             t_x;
     int             t_y;
@@ -60,9 +77,9 @@ typedef struct client {
     int             f_height;
     int             border_width;
     int             border_color;
+    Mode            mode;
+    Mode            saved_mode;
     State           state;
-    State           saved_state;
-    Property        properties;
     int             reserved_top;
     int             reserved_bottom;
     int             reserved_left;
@@ -81,22 +98,30 @@ typedef struct client {
     Monitor         *monitor;
     int             tagset;
     int             saved_tagset;
-    struct client   *prev;
-    struct client   *next;
+    struct _Client  *prev;
+    struct _Client  *next;
 } Client;
 
+#define IS_CLIENT_STATE(c, s) ((c->state & s) == (s))
+#define IS_CLIENT_STATE_NOT(c, s) (! IS_CLIENT_STATE(c, s))
+#define CLIENT_SET_STATE(c, s) ((c->state |= s))
+#define CLIENT_UNSET_STATE(c, s) ((c->state &= ~s))
+#define IS_VISIBLE(c) ((c->tagset & c->monitor->tagset) || ! c->tagset)
+
 void client_initialize(Client *client, xcb_window_t window);
+void client_set_focusable(Client *client, int focusable);
+void client_set_sticky(Client *client, int sticky);
+void client_set_fullscreen(Client *client, int fullscreen);
+void client_set_urgency(Client *client, int urgency);
 void client_hide(Client *client);
 void client_show(Client *client);
 void client_apply_size_hints(Client *client);
 void client_set_focused(Client *client, int focus);
-void client_set_fullscreen(Client *client, int fullscreen);
-void client_set_urgent(Client *client, int urgent);
 int client_update_reserved(Client *client);
 int client_update_size_hints(Client *client);
 int client_update_wm_hints(Client *client);
 int client_update_window_type(Client *client);
-Client *client_next(Client *client, State state, Property properties);
-Client *client_previous(Client *client, State state, Property properties);
+Client *client_next(Client *client, Mode mode, State state);
+Client *client_previous(Client *client, Mode mode, State state);
 
 #endif

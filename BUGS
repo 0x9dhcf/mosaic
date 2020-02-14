@@ -33,3 +33,15 @@ Check X server request flushing when repositionning transient window.
 
 Check why the set input focus on root is not catched.
 
+## When fullscreen abd changing tags, focused monitor and tagsets are no more consistent
+
+### Reproduce:
+
+    - Set a window fullscreen
+    - Set monitor tag to an other tag
+    - Set the window normal size
+
+### Resolution:
+
+Either freeze tag management when fullscreen or call check_focus_consistency
+

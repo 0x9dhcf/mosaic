@@ -1,3 +1,6 @@
+rename MWM_COUNT -> MWM_ATOM_CONT
+typedef for naming consistency (xcb_window_t -> Window)
+
 # 1.0.x
 - multi-heads
 
