@@ -58,9 +58,12 @@
 
 /* static "extern" configuration */
 unsigned int    g_border_width      = 1;
-unsigned int    g_normal_color      = 0x333333;
-unsigned int    g_focused_color     = 0x888888;
-unsigned int    g_urgent_color      = 0xfb4934;
+unsigned int    g_normal_color      = 0x888888;
+unsigned int    g_focused_color     = 0x0000ff;
+unsigned int    g_urgent_color      = 0xff0000;
+//unsigned int    g_normal_color      = 0x333333;
+//unsigned int    g_focused_color     = 0x888888;
+//unsigned int    g_urgent_color      = 0xfb4934;
 
 Shortcut g_shortcuts[] = {
     /* global */
@@ -155,6 +158,7 @@ static void scan_monitors();
 static void trap();
 static void usage();
 static void version();
+static unsigned int parse_color(const char* hex);
 
 /* static variables */
 static const char *atom_names[MWM_ATOM_COUNT] = {
@@ -587,7 +591,11 @@ void usage()
     printf("minimal window manager %s\n", VERSION);
     printf("Usage: mwm [OPTIONS]\n\n"\
            "-h, --help\t\tprint this message.\n"\
-           "-v, --version\t\tprint the version.\n");
+           "-v, --version\t\tprint the version.\n"\
+           "-b, --border-width\tset window border width (default 1).\n"
+           "-n, --normal-color\tset window border color (default grey).\n"
+           "-f, --focused-color\tset window border color when focused (default blue).\n"
+           "-u, --urgent-color\tset window border color when urgent (default red).\n");
     exit(2);
 }
 
@@ -595,6 +603,15 @@ void version()
 {
     printf("%s\n", VERSION);
     exit(EXIT_SUCCESS);
+}
+
+unsigned int parse_color(const char* hex)
+{
+    if (hex[0] != '#' || strlen(hex) != 7) {
+        INFO("wrong color format: %s", hex);
+        return 0;
+    }
+    return (unsigned int)strtoul(hex+1, NULL, 16);
 }
 
 void quit()
@@ -1142,18 +1159,34 @@ int main(int argc, char **argv)
     static struct option long_options[] = {
         {"help", no_argument, 0, 'h'},
         {"version", no_argument, 0, 'v'},
+        {"border-width", required_argument, 0, 'b'},
+        {"normal-color", required_argument, 0, 'n'},
+        {"focused-color", required_argument, 0, 'f'},
+        {"urgent-color", required_argument, 0, 'u'},
         {0, 0, 0, 0}};
     int option_index = 0, opt;
 
     setlocale(LC_ALL, "");
 
-    while ((opt = getopt_long(argc, argv, "hv", long_options, &option_index)) != -1) {
+    while ((opt = getopt_long(argc, argv, "hvb:n:f:u", long_options, &option_index)) != -1) {
         switch (opt) {
             case 'h':
                 usage();
                 break;
             case 'v':
                 version();
+                break;
+            case 'b':
+                g_border_width = atoi(optarg);
+                break;
+            case 'n':
+                g_normal_color = parse_color(optarg);
+                break;
+            case 'f':
+                g_focused_color = parse_color(optarg);
+                break;
+            case 'u':
+                g_urgent_color = parse_color(optarg);
                 break;
             default:
                 usage();

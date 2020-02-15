@@ -23,4 +23,8 @@
 xrdb -load ~/.Xresources
 xsetroot -cursor_name left_ptr
 xsetroot -solid "#1d2021" 
-exec mwm
+exec mwm\
+    --border-width 1\
+    --normal-color "#333333"\
+    --focused-color "#888888"\
+    --urgent-color "#fb4934"
