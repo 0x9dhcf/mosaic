@@ -174,6 +174,9 @@ void client_initialize(Client *client, xcb_window_t window)
     client_update_size_hints(client);
     client_update_wm_hints(client);
     client_update_window_type(client);
+
+    /* apply hint size */
+    client_apply_size_hints(client);
 }
 
 void client_set_focusable(Client *client, int focusable)
