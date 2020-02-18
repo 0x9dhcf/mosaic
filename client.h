@@ -29,28 +29,6 @@
 
 typedef struct _Monitor Monitor;
 
-/*
-typedef enum state {
-    STATE_ANY,
-    STATE_TILED,
-    STATE_FLOATING,
-    STATE_FULLSCREEN
-} State;
-
-typedef int Property;
-
-#define PROPERTY_FOCUSABLE   0x01
-#define PROPERTY_RESIZABLE   0x02
-#define PROPERTY_URGENT      0x04
-#define PROPERTY_ANY         0x00
-
-#define HAS_PROPERTIES(c, p) ((c->properties & p) == (p))
-#define IS_VISIBLE(c) ((c->tagset & c->monitor->tagset) || ! c->tagset)
-#define IS_FIXED(c) (c->state == STATE_FLOATING && \
-        ! HAS_PROPERTIES(c, PROPERTY_RESIZABLE & PROPERTY_FOCUSABLE))
-
-*/
-
 typedef enum _Mode {
     MODE_ANY,
     MODE_TILED,

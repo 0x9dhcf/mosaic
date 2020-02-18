@@ -196,8 +196,10 @@ void on_property_notify(xcb_property_notify_event_t *e)
         if (client_update_reserved(client))
             refresh = 1;
 
-    if (refresh)
+    if (refresh) {
         monitor_render(client->monitor);
+        xcb_flush(g_xcb);
+    }
 }
 
 void on_focus_in(xcb_focus_in_event_t *e)
@@ -322,7 +324,7 @@ void on_client_message(xcb_client_message_event_t *e)
 #define STATE(event, atom) (event->data.data32[1] == atom || event->data.data32[2] == atom)
 
         if (STATE(e, g_ewmh._NET_WM_STATE_FULLSCREEN)) {
-            if (IS_CLIENT_STATE_NOT(c, STATE_FULLSCREEN)  &&
+            if (IS_CLIENT_STATE_NOT(c, STATE_FULLSCREEN) &&
                     (e->data.data32[0] ==  XCB_EWMH_WM_STATE_ADD ||
                      e->data.data32[0] ==  XCB_EWMH_WM_STATE_TOGGLE))
                 client_set_fullscreen(c, 1);
@@ -331,13 +333,23 @@ void on_client_message(xcb_client_message_event_t *e)
                      e->data.data32[0] ==  XCB_EWMH_WM_STATE_TOGGLE))
                 client_set_fullscreen(c, 0);
         } else if (STATE(e,  g_ewmh._NET_WM_STATE_DEMANDS_ATTENTION)) {
+            if (IS_CLIENT_STATE_NOT(c, STATE_URGENT)  &&
+                    (e->data.data32[0] ==  XCB_EWMH_WM_STATE_ADD ||
+                     e->data.data32[0] ==  XCB_EWMH_WM_STATE_TOGGLE))
+                client_set_urgency(c, 1);
+            if (IS_CLIENT_STATE(c, STATE_URGENT)  &&
+                    (e->data.data32[0] ==  XCB_EWMH_WM_STATE_REMOVE ||
+                     e->data.data32[0] ==  XCB_EWMH_WM_STATE_TOGGLE))
+                client_set_urgency(c, 0);
             /* Check if the urgent flag must be set */
+            /*
             if (e->data.data32[0] == XCB_EWMH_WM_STATE_ADD)
                 client_set_urgency(c, 1);
             else if (e->data.data32[0] == XCB_EWMH_WM_STATE_REMOVE)
-                client_set_urgency(c, 1);
+                client_set_urgency(c, 0);
             else if (e->data.data32[0] == XCB_EWMH_WM_STATE_TOGGLE)
                 client_set_urgency(c, IS_CLIENT_STATE(c, STATE_URGENT));
+            */
         } else if (STATE(e,  g_ewmh._NET_WM_STATE_MODAL)) {
             if (c->mode != MODE_FLOATING  &&
                     (e->data.data32[0] ==  XCB_EWMH_WM_STATE_ADD ||
@@ -349,6 +361,15 @@ void on_client_message(xcb_client_message_event_t *e)
                 /* XXX: who said the client was not floating before
                  * being set to modal */
                 c->mode = MODE_TILED;
+        } else if (STATE(e,  g_ewmh._NET_WM_STATE_STICKY)) {
+            if (IS_CLIENT_STATE_NOT(c, STATE_STICKY)  &&
+                    (e->data.data32[0] ==  XCB_EWMH_WM_STATE_ADD ||
+                     e->data.data32[0] ==  XCB_EWMH_WM_STATE_TOGGLE))
+                client_set_sticky(c, 1);
+            if (IS_CLIENT_STATE(c, STATE_STICKY)  &&
+                    (e->data.data32[0] ==  XCB_EWMH_WM_STATE_REMOVE ||
+                     e->data.data32[0] ==  XCB_EWMH_WM_STATE_TOGGLE))
+                client_set_sticky(c, 0);
         }
 #undef STATE
 

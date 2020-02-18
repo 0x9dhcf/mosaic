@@ -186,10 +186,13 @@ void client_set_focusable(Client *client, int focusable)
 
 void client_set_sticky(Client *client, int sticky)
 {
-    if (sticky)
+    if (sticky) {
         CLIENT_SET_STATE(client, STATE_STICKY);
-    else
+        client->mode = MODE_FLOATING;
+    } else {
         CLIENT_UNSET_STATE(client, STATE_STICKY);
+        /* what should be the state now ??? */
+    }
 }
 
 void client_set_fullscreen(Client *client, int fullscreen)
@@ -323,7 +326,7 @@ void client_apply_size_hints(Client *client)
     if (IS_CLIENT_STATE(client, STATE_FULLSCREEN))
         return;
 
-    /* Handle the size aspect ratio */
+    /* handle the size aspect ratio */
     double dx = client->f_width - client->base_width;
     double dy = client->f_height - client->base_height;
     double ratio = dx / dy;
@@ -339,11 +342,11 @@ void client_apply_size_hints(Client *client)
         }
     }
 
-    /* Handle the minimum size */
+    /* handle the minimum size */
     client->f_width = MAX(client->f_width, client->min_width);
     client->f_height = MAX(client->f_height, client->min_height);
 
-    /* Handle the maximum size */
+    /* handle the maximum size */
     if (client->max_width > 0) {
         client->f_width = MIN(client->f_width, client->max_width);
     }
@@ -351,7 +354,7 @@ void client_apply_size_hints(Client *client)
         client->f_height = MIN(client->f_height, client->max_height);
     }
 
-    /* Handle the size increment */
+    /* handle the size increment */
     if (client->width_increment > 0 && client->height_increment > 0) {
         int t1 = client->f_width, t2 = client->f_height;
         t1 = client->base_width > t1 ? 0 : t1 - client->base_width;
@@ -523,11 +526,10 @@ int client_update_window_type(Client *client)
         return 0;
     }
 
-    if (client->mode != MODE_FLOATING &&
-            (xcb_reply_contains_atom(type, g_ewmh._NET_WM_WINDOW_TYPE_DIALOG) ||
+    if (xcb_reply_contains_atom(type, g_ewmh._NET_WM_WINDOW_TYPE_DIALOG) ||
              xcb_reply_contains_atom(type, g_ewmh._NET_WM_WINDOW_TYPE_UTILITY) ||
              xcb_reply_contains_atom(type, g_ewmh._NET_WM_WINDOW_TYPE_TOOLBAR) ||
-             xcb_reply_contains_atom(type, g_ewmh._NET_WM_WINDOW_TYPE_SPLASH))) {
+             xcb_reply_contains_atom(type, g_ewmh._NET_WM_WINDOW_TYPE_SPLASH)) {
         client->mode = MODE_FLOATING;
         refresh = 1;
     }
