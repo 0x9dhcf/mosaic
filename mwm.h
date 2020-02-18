@@ -63,7 +63,7 @@ enum  {
     CB_INT
 };
 
-typedef struct shortcut {
+typedef struct _Shortcut {
     struct {
         unsigned int modifier;
         xkb_keysym_t keysym;
@@ -76,7 +76,7 @@ typedef struct shortcut {
     union { int i; } arg;
 } Shortcut;
 
-typedef struct rule {
+typedef struct _Rule {
     char *class_name;
     char *instance_name;
     int tags;
