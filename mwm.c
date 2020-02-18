@@ -171,7 +171,7 @@ static struct xkb_context *xkb_context = NULL;
 static struct xkb_keymap *xkb_keymap = NULL;
 
 static Monitor *monitor_head = NULL;
-static Monitor *Monitorail = NULL;
+static Monitor *monitor_tail = NULL;
 static Monitor *primary_monitor = NULL;
 static Monitor *focused_monitor = NULL;
 static Client *focused_client = NULL;
@@ -523,15 +523,15 @@ void scan_monitors()
                 monitor_info->height);
 
         /* add the monitor */
-        if (Monitorail) {
-            m->prev = Monitorail;
-            Monitorail->next = m;
+        if (monitor_tail) {
+            m->prev = monitor_tail;
+            monitor_tail->next = m;
         }
 
         if (! monitor_head)
             monitor_head = m;
 
-        Monitorail = m;
+        monitor_tail = m;
         free(name);
 
         if (monitor_info->primary)
@@ -555,15 +555,15 @@ void scan_monitors()
                 reply->width,
                 reply->height);
         /* add the monitor */
-        if (Monitorail) {
-            m->prev = Monitorail;
-            Monitorail->next = m;
+        if (monitor_tail) {
+            m->prev = monitor_tail;
+            monitor_tail->next = m;
         }
 
         if (! monitor_head)
             monitor_head = m;
 
-        Monitorail = m;
+        monitor_tail = m;
         free(reply);
     }
 
