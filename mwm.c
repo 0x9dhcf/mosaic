@@ -61,9 +61,6 @@ unsigned int    g_border_width      = 1;
 unsigned int    g_normal_color      = 0x888888;
 unsigned int    g_focused_color     = 0x0000ff;
 unsigned int    g_urgent_color      = 0xff0000;
-//unsigned int    g_normal_color      = 0x333333;
-//unsigned int    g_focused_color     = 0x888888;
-//unsigned int    g_urgent_color      = 0xfb4934;
 
 Shortcut g_shortcuts[] = {
     /* global */
@@ -937,8 +934,10 @@ void focused_client_move_up()
     CHECK_FOCUSED
 
     if (focused_client->mode == MODE_FLOATING) {
-        focused_client->f_y -= MOVE_INC;
-        client_show(focused_client);
+        if (IS_CLIENT_STATE_NOT(focused_client, STATE_STICKY)) {
+            focused_client->f_y -= MOVE_INC;
+            client_show(focused_client);
+        }
     } else {
         Client *c = client_previous(focused_client, MODE_TILED, STATE_ANY);
         if (c)
@@ -953,8 +952,10 @@ void focused_client_move_down()
     CHECK_FOCUSED
 
     if (focused_client->mode == MODE_FLOATING) {
-        focused_client->f_y += MOVE_INC;
-        client_show(focused_client);
+        if (IS_CLIENT_STATE_NOT(focused_client, STATE_STICKY)) {
+            focused_client->f_y += MOVE_INC;
+            client_show(focused_client);
+        }
     } else {
         Client *c = client_next(focused_client, MODE_TILED, STATE_ANY);
         if (c)
@@ -969,8 +970,10 @@ void focused_client_move_left()
     CHECK_FOCUSED
 
     if (focused_client->mode == MODE_FLOATING) {
-        focused_client->f_x -= MOVE_INC;
-        client_show(focused_client);
+        if (IS_CLIENT_STATE_NOT(focused_client, STATE_STICKY)) {
+            focused_client->f_x -= MOVE_INC;
+            client_show(focused_client);
+        }
     } else {
         Client *c = client_previous(focused_client, MODE_TILED, STATE_ANY);
         if (c)
@@ -985,8 +988,10 @@ void focused_client_move_right()
     CHECK_FOCUSED
 
     if (focused_client->mode == MODE_FLOATING) {
-        focused_client->f_x += MOVE_INC;
-        client_show(focused_client);
+        if (IS_CLIENT_STATE_NOT(focused_client, STATE_STICKY)) {
+            focused_client->f_x += MOVE_INC;
+            client_show(focused_client);
+        }
     } else {
         Client *c = client_next(focused_client, MODE_TILED, STATE_ANY);
         if (c)
@@ -1093,13 +1098,14 @@ void focused_client_decrease_height()
         focused_client->f_height -= SIZE_INC;
         client_apply_size_hints(focused_client); /* TODO: return if no change */
         client_show(focused_client);
+        xcb_flush(g_xcb);
     } else {
         if (focused_monitor->split > MAIN_SPLIT_MIN) {
             focused_monitor->split -= MAIN_SPLIT_INC;
             monitor_render(focused_monitor);
+            xcb_flush(g_xcb);
         }
     }
-    xcb_flush(g_xcb);
 }
 
 /* set this tag and this tag only */
@@ -1219,7 +1225,11 @@ int main(int argc, char **argv)
     if (home) {
         snprintf(autostart, sizeof(autostart), "%s/%s", home, AUTOSTART);
         if (stat(autostart, &st) == 0 && st.st_mode & S_IXUSR)
-            system(autostart);
+            //system(autostart);
+            if (fork() == 0) {
+                execl(autostart, NULL);
+                exit(EXIT_SUCCESS);
+            }
         else
             INFO("no mwmrc found.");
     }

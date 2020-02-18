@@ -230,7 +230,7 @@ void monitor_initialize(Monitor *monitor, const char *name, int x, int y, int wi
     monitor->split = DEFAULT_SPLIT;
     monitor->mains = DEFAULT_MAINS;
     memset(monitor->tags, 0, 32 * sizeof(int));
-    monitor->tagset = 0x1;
+    monitor->tagset = 1;
     monitor->head = NULL;
     monitor->tail = NULL;
     monitor->next = NULL;
@@ -240,13 +240,11 @@ void monitor_initialize(Monitor *monitor, const char *name, int x, int y, int wi
 void monitor_attach(Monitor *monitor, Client *client)
 {
     client->monitor = monitor;
-    if (IS_CLIENT_STATE_NOT(client, STATE_STICKY)) {
-        if (client->tagset < 0)
-            client->tagset = monitor->tagset;
-        for (int i = 0; i < 32; ++i)
-            if (client->tagset & (1L << i))
-                monitor->tags[i]++;
-    }
+    if (client->tagset < 0)
+        client->tagset = monitor->tagset;
+    for (int i = 0; i < 32; ++i)
+        if (client->tagset & (1L << i))
+            monitor->tags[i]++;
 
     if (monitor->head) {
         client->next = monitor->head;
