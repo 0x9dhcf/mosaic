@@ -301,8 +301,8 @@ void monitor_render(Monitor *monitor)
         if (IS_CLIENT_STATE(c, STATE_FULLSCREEN))
             fullscreen++;
 
-        /* do not hide transient nor fixed */
-        if (! c->transient && IS_CLIENT_STATE_NOT(c, STATE_STICKY))
+        /* do not hide sticky nor those visible on all tagset */
+        if (IS_CLIENT_STATE_NOT(c, STATE_STICKY) && c->tagset)
             client_hide(c);
 
         if (c->mode == MODE_TILED && IS_VISIBLE(c))
@@ -316,8 +316,8 @@ void monitor_render(Monitor *monitor)
             rt = MAX(rt, c->reserved_top);
             rb = MAX(rb, c->reserved_bottom);
         }
-        wx = rl;
-        wy = rt;
+        wx = monitor->x + rl;
+        wy = monitor->y + rt;
         ww = monitor->width - (rl + rr);
         wh = monitor->height - (rt + rb);
     }
@@ -325,6 +325,7 @@ void monitor_render(Monitor *monitor)
     int mains = tilables < monitor->mains ? tilables : monitor->mains;
     int stacked = (tilables - mains) > 0 ? (tilables - mains ) : 0;
 
+    DEBUG("rendering: %s - (%d, %d), [%d x %d]", monitor->name, wx, wy, ww, wh);
     DEBUG("tilables: %d", tilables);
     DEBUG("mains: %d", mains);
     DEBUG("stacked: %d", stacked);

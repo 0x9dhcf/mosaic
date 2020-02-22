@@ -26,6 +26,7 @@
 #include <xcb/xcb_aux.h>
 #include <xcb/xkb.h>
 #include <xcb/xcb_keysyms.h>
+#include <xcb/randr.h>
 
 #include "events.h"
 #include "log.h"
@@ -34,6 +35,7 @@
 
 static void notify(Client *c);
 static void on_configure_request(xcb_configure_request_event_t *e);
+static void on_configure_notify(xcb_configure_notify_event_t *e);
 static void on_map_request(xcb_map_request_event_t *e);
 static void on_unmap_notify(xcb_unmap_notify_event_t *e);
 static void on_property_notify(xcb_property_notify_event_t *e);
@@ -129,13 +131,11 @@ void on_configure_request(xcb_configure_request_event_t *e)
     xcb_aux_sync(g_xcb);
 }
 
-/* TODO
-static void on_configure_notify(xcb_configure_notify_event_t *e)
+void on_configure_notify(xcb_configure_notify_event_t *e)
 {
     if (e->window == g_root)
         scan_monitors();
 }
-*/
 
 void on_map_request(xcb_map_request_event_t *e)
 {
@@ -451,9 +451,9 @@ void on_event(xcb_generic_event_t *event)
         case XCB_CONFIGURE_REQUEST:
             on_configure_request((xcb_configure_request_event_t*)event);
             break;
-        //case XCB_CONFIGURE_NOTIFY:
-        //    on_configure_notify((xcb_configure_notify_event_t*)event);
-        //    break;
+        case XCB_CONFIGURE_NOTIFY:
+            on_configure_notify((xcb_configure_notify_event_t*)event);
+            break;
         case XCB_MAP_REQUEST:
             on_map_request((xcb_map_request_event_t *)event);
             break;
@@ -499,6 +499,7 @@ void on_event(xcb_generic_event_t *event)
         //case XCB_DESTROY_NOTIFY:
         //    on_destroy_notify((xcb_destroy_notify_event_t *)event);
         //    break;
+        // Doesn't seem to be triggered??
         //case XCB_RANDR_SCREEN_CHANGE_NOTIFY:
         //    scan_monitors();
         //    break;

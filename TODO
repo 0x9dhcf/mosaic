@@ -1,12 +1,6 @@
-rename MWM_COUNT -> MWM_ATOM_CONT
-typedef for naming consistency (xcb_window_t -> Window)
-
-# 1.0.x
-- multi-heads
-
 # 1.1.x
 - progressive stack
-- keep track of urgent windows (add a MWM atom)A
+- keep track of urgent windows (add a MWM atom)
 
 # x.x.x
 - mouse support?

@@ -149,9 +149,10 @@ static void setup_xcb();
 static void setup_atoms();
 static void setup_window_manager();
 static void setup_shortcuts();
+static void add_monitor(Monitor *monitor);
+static void del_monitor(Monitor *monitor);
 static void check_focus_consistency();
 static void cleanup_window_manager();
-static void scan_monitors();
 static void trap();
 static void usage();
 static void version();
@@ -437,6 +438,32 @@ void setup_shortcuts()
     xcb_key_symbols_free(ks);
 }
 
+void add_monitor(Monitor *monitor)
+{
+    if (monitor_tail) {
+        monitor->prev = monitor_tail;
+        monitor_tail->next = monitor;
+    }
+
+    if (! monitor_head)
+        monitor_head = monitor;
+
+    monitor_tail = monitor;
+}
+
+void del_monitor(Monitor *monitor)
+{
+    if (monitor->prev)
+        monitor->prev->next = monitor->next;
+    else
+        monitor_head = monitor->next;
+
+    if (monitor->next)
+        monitor->next->prev = monitor->prev;
+    else
+        monitor_tail = monitor->prev;
+}
+
 void check_focus_consistency()
 {
     if (focused_client &&
@@ -473,31 +500,121 @@ void cleanup_window_manager()
     xcb_aux_sync(g_xcb);
     xcb_grab_server(g_xcb);
 
-    Monitor *m = monitor_head;
+    Monitor *m, *n;
+    m = monitor_head;
+    n = NULL;
     while (m) {
-        Client *c = m->head;
+        Client *c, *d;
+        n = m->next;
+
+        c = m->head;
+        d = NULL;
         while (c) {
-            Client *d = c;
-            c = c->next;
-            free (d);
+            d = c->next;
+            free(c);
+            c = d;
         }
-        Monitor *n = m;
-        m = m->next;
-        free(n);
+        free(m);
+        m = n;
     }
 
     xcb_destroy_window(g_xcb, supporting_window);
     xcb_ungrab_server(g_xcb);
 }
 
+static void add_new_monitors(Monitor *scanned)
+{
+    for (Monitor *ms = scanned; ms; ms = ms->next) {
+
+        /* check if already exists */
+        int exists = 0;
+        for (Monitor *me = monitor_head; me; me = me->next) {
+            if (strcmp(me->name, ms->name) == 0) {
+                exists = 1;
+                break;
+            }
+        }
+
+        if (exists)
+            continue;
+
+        /* if not add it */
+        INFO("Adding monitor %s: (%d, %d), [%d, %d]",
+                ms->name,
+                ms->x,
+                ms->y,
+                ms->width,
+                ms->height);
+        Monitor *m = malloc(sizeof(Monitor));
+        monitor_initialize(
+                m,
+                ms->name,
+                ms->x,
+                ms->y,
+                ms->width,
+                ms->height);
+
+        add_monitor(m);
+    }
+}
+
+static void del_old_monitors(Monitor *scanned)
+{
+    Monitor *m, *n;
+    //for (m = monitor_head, n = m->next; m && n;  m = n, n = m->next) {
+    m = monitor_head;
+    while (m) {
+         /* check if already exists */
+        int exists = 0;
+        for (Monitor *ms = scanned; ms; ms = ms->next) {
+            if (strcmp(m->name, ms->name) == 0) {
+                exists = 1;
+                break;
+            }
+        }
+
+        if (exists) {
+            m = m->next;
+            continue;
+        }
+
+        /* if not remove it */
+        INFO("Removing monitor %s: (%d, %d), [%d, %d]",
+                m->name,
+                m->x,
+                m->y,
+                m->width,
+                m->height);
+       
+        Client *c, *d;
+        c = m->head;
+        while (c) {
+        //for (c = m->head, d = c->next; c; c = d, d = c->next) {
+            d = c->next;
+            monitor_detach(m, c);
+            monitor_attach(primary_monitor, c);
+            c = d;
+        }
+
+        n = m->next;
+        del_monitor(m);
+        free(m);
+        m = n; 
+    }
+}
+
 void scan_monitors()
 {
+    Monitor *scanned = NULL;
+
+    /* build the list of detected monitors */
     xcb_randr_get_monitors_reply_t *monitors_reply;
     monitors_reply = xcb_randr_get_monitors_reply(
             g_xcb,
             xcb_randr_get_monitors(g_xcb, g_root, 1),
             NULL);
 
+    char primary_name[128];
     for (xcb_randr_monitor_info_iterator_t iter =
             xcb_randr_get_monitors_monitors_iterator(monitors_reply);
             iter.rem; xcb_randr_monitor_info_next(&iter)) {
@@ -523,21 +640,34 @@ void scan_monitors()
                 monitor_info->height);
 
         /* add the monitor */
-        if (monitor_tail) {
-            m->prev = monitor_tail;
-            monitor_tail->next = m;
+        if (scanned) {
+            scanned->prev = m;
+            m->next = scanned;
         }
+        scanned = m;
 
-        if (! monitor_head)
-            monitor_head = m;
-
-        monitor_tail = m;
-        free(name);
-
+        /* keep track of the primary */
         if (monitor_info->primary)
-            primary_monitor = m;
+            strcpy(primary_name, cname);
     }
     free(monitors_reply);
+
+    add_new_monitors(scanned);
+    del_old_monitors(scanned);
+
+    /* free the scanned list */
+    Monitor *ms = scanned;
+    while (ms) {
+        Monitor *n = ms;
+        ms = ms->next;
+        free(n);
+    }
+
+    /* find the primay */
+    for (Monitor *m = monitor_head; m; m = m->next) {
+        if (strcmp(m->name, primary_name) == 0)
+            primary_monitor = m;
+    }
 
     /* if no monitor, fallback to root window */
     if (! monitor_head) {
@@ -576,7 +706,100 @@ void scan_monitors()
 
     check_focus_consistency();
     hints_set_monitor(focused_monitor);
+
+    /* render the primary in case of new clients
+     * from removed monitor(s) */
+    monitor_render(primary_monitor);
+    xcb_flush(g_xcb);
 }
+
+//void scan_monitors()
+//{
+//    xcb_randr_get_monitors_reply_t *monitors_reply;
+//    monitors_reply = xcb_randr_get_monitors_reply(
+//            g_xcb,
+//            xcb_randr_get_monitors(g_xcb, g_root, 1),
+//            NULL);
+//
+//    for (xcb_randr_monitor_info_iterator_t iter =
+//            xcb_randr_get_monitors_monitors_iterator(monitors_reply);
+//            iter.rem; xcb_randr_monitor_info_next(&iter)) {
+//        const xcb_randr_monitor_info_t *monitor_info = iter.data;
+//
+//        xcb_get_atom_name_reply_t *name =
+//                xcb_get_atom_name_reply(
+//                        g_xcb,
+//                        xcb_get_atom_name(g_xcb, monitor_info->name),
+//                        NULL);
+//        /* XXX: name = NULL !!! */
+//        int len = xcb_get_atom_name_name_length(name);
+//        char cname[128];
+//        strncpy(cname, xcb_get_atom_name_name(name), len);
+//        cname[len] = '\0';
+//        Monitor *m = malloc(sizeof(Monitor));
+//        monitor_initialize(
+//                m,
+//                cname,
+//                monitor_info->x,
+//                monitor_info->y,
+//                monitor_info->width,
+//                monitor_info->height);
+//
+//        /* add the monitor */
+//        if (monitor_tail) {
+//            m->prev = monitor_tail;
+//            monitor_tail->next = m;
+//        }
+//
+//        if (! monitor_head)
+//            monitor_head = m;
+//
+//        monitor_tail = m;
+//        free(name);
+//
+//        if (monitor_info->primary)
+//            primary_monitor = m;
+//    }
+//    free(monitors_reply);
+//
+//    /* if no monitor, fallback to root window */
+//    if (! monitor_head) {
+//        xcb_get_geometry_reply_t *reply =
+//                xcb_get_geometry_reply(
+//                        g_xcb,
+//                        xcb_get_geometry(g_xcb, g_root),
+//                        NULL);
+//        Monitor *m = malloc(sizeof(Monitor));
+//        monitor_initialize(
+//                m,
+//                "Default",
+//                reply->x,
+//                reply->y,
+//                reply->width,
+//                reply->height);
+//        /* add the monitor */
+//        if (monitor_tail) {
+//            m->prev = monitor_tail;
+//            monitor_tail->next = m;
+//        }
+//
+//        if (! monitor_head)
+//            monitor_head = m;
+//
+//        monitor_tail = m;
+//        free(reply);
+//    }
+//
+//    /* set the primary */
+//    if (!primary_monitor)
+//        primary_monitor = monitor_head;
+//
+//    focused_client = NULL;
+//    focused_monitor = primary_monitor;
+//
+//    check_focus_consistency();
+//    hints_set_monitor(focused_monitor);
+//}
 
 void trap(int sig)
 {
@@ -787,6 +1010,8 @@ void focus_next_monitor()
     if (focused_monitor->next) {
         focused_monitor = focused_monitor->next;
         check_focus_consistency();
+        monitor_render(focused_monitor);
+        xcb_flush(g_xcb);
     }
 }
 
@@ -795,13 +1020,9 @@ void focus_previous_monitor()
     if (focused_monitor->prev) {
         focused_monitor = focused_monitor->prev;
         check_focus_consistency();
+        monitor_render(focused_monitor);
+        xcb_flush(g_xcb);
     }
-}
-
-void focused_monitor_render()
-{
-    monitor_render(focused_monitor);
-    xcb_flush(g_xcb);
 }
 
 void focused_monitor_increase_main_views()
@@ -934,10 +1155,8 @@ void focused_client_move_up()
     CHECK_FOCUSED
 
     if (focused_client->mode == MODE_FLOATING) {
-        if (IS_CLIENT_STATE_NOT(focused_client, STATE_STICKY)) {
-            focused_client->f_y -= MOVE_INC;
-            client_show(focused_client);
-        }
+        focused_client->f_y -= MOVE_INC;
+        client_show(focused_client);
     } else {
         Client *c = client_previous(focused_client, MODE_TILED, STATE_ANY);
         if (c)
@@ -952,10 +1171,8 @@ void focused_client_move_down()
     CHECK_FOCUSED
 
     if (focused_client->mode == MODE_FLOATING) {
-        if (IS_CLIENT_STATE_NOT(focused_client, STATE_STICKY)) {
-            focused_client->f_y += MOVE_INC;
-            client_show(focused_client);
-        }
+        focused_client->f_y += MOVE_INC;
+        client_show(focused_client);
     } else {
         Client *c = client_next(focused_client, MODE_TILED, STATE_ANY);
         if (c)
@@ -970,10 +1187,8 @@ void focused_client_move_left()
     CHECK_FOCUSED
 
     if (focused_client->mode == MODE_FLOATING) {
-        if (IS_CLIENT_STATE_NOT(focused_client, STATE_STICKY)) {
-            focused_client->f_x -= MOVE_INC;
-            client_show(focused_client);
-        }
+        focused_client->f_x -= MOVE_INC;
+        client_show(focused_client);
     } else {
         Client *c = client_previous(focused_client, MODE_TILED, STATE_ANY);
         if (c)
@@ -988,10 +1203,8 @@ void focused_client_move_right()
     CHECK_FOCUSED
 
     if (focused_client->mode == MODE_FLOATING) {
-        if (IS_CLIENT_STATE_NOT(focused_client, STATE_STICKY)) {
-            focused_client->f_x += MOVE_INC;
-            client_show(focused_client);
-        }
+        focused_client->f_x += MOVE_INC;
+        client_show(focused_client);
     } else {
         Client *c = client_next(focused_client, MODE_TILED, STATE_ANY);
         if (c)
@@ -1013,6 +1226,9 @@ void focused_client_to_next_monitor()
         monitor_attach(nm, c);
         focused_monitor = c->monitor;
         check_focus_consistency();
+        monitor_render(cm);
+        monitor_render(nm);
+        xcb_flush(g_xcb);
     }
 }
 
@@ -1028,6 +1244,9 @@ void focused_client_to_previous_monitor()
         monitor_attach(pm, c);
         focused_monitor = c->monitor;
         check_focus_consistency();
+        monitor_render(cm);
+        monitor_render(pm);
+        xcb_flush(g_xcb);
     }
 }
 
@@ -1225,11 +1444,7 @@ int main(int argc, char **argv)
     if (home) {
         snprintf(autostart, sizeof(autostart), "%s/%s", home, AUTOSTART);
         if (stat(autostart, &st) == 0 && st.st_mode & S_IXUSR)
-            //system(autostart);
-            if (fork() == 0) {
-                execl(autostart, NULL);
-                exit(EXIT_SUCCESS);
-            }
+            system(autostart);
         else
             INFO("no mwmrc found.");
     }

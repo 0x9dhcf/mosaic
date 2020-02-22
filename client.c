@@ -109,12 +109,11 @@ void client_initialize(Client *client, xcb_window_t window)
                     UINT32_MAX),
             NULL);
 
-    if (transient && xcb_get_property_value_length(transient) != 0) {
+    if (transient && xcb_get_property_value_length(transient) != 0)
         xcb_icccm_get_wm_transient_for_from_reply(
                 &client->transient,
                 transient);
         free(transient);
-    }
 
     /* keep track of event f interrest */
     xcb_change_window_attributes(
@@ -216,6 +215,7 @@ void client_set_fullscreen(Client *client, int fullscreen)
 
 void client_set_urgency(Client *client, int urgency)
 {
+    DEBUG_FUNCTION;
     if (urgency)
         CLIENT_SET_STATE(client, STATE_URGENT);
     else
@@ -389,6 +389,7 @@ int client_update_reserved(Client *client)
     return 0;
 }
 
+/* TODO update user size (XCB_ICCCM_SIZE_HINT_US_POSITION etc.) */
 int client_update_size_hints(Client *client)
 {
     int refresh = 0;
@@ -466,10 +467,12 @@ int client_update_size_hints(Client *client)
         client->max_aspect_ratio = (double)max_aspect_num / (double)max_aspect_den;
         client->min_aspect_ratio = (double)min_aspect_num / (double)min_aspect_den;
 
+        /* XXX: the client should be "fixed" but definitely not "sticky"
         if (client->max_width && client->max_height &&
                 client->max_width == client->min_width &&
                 client->max_height == client->min_height)
             client_set_sticky(client, 1);
+        */
         refresh = 1;
     }
 
@@ -497,10 +500,9 @@ int client_update_wm_hints(Client *client)
     if (xcb_get_property_value_length(hints) != 0) {
         xcb_icccm_wm_hints_t wm_hints;
         if (xcb_icccm_get_wm_hints_from_reply(&wm_hints, hints)) {
-            if (wm_hints.flags & XCB_ICCCM_WM_HINT_INPUT && ! wm_hints.input)
-                client_set_focusable(client, 0);
-            if (xcb_icccm_wm_hints_get_urgency(&wm_hints))
-                client_set_urgency(client, 1);
+            if (wm_hints.flags & XCB_ICCCM_WM_HINT_INPUT)
+                client_set_focusable(client, wm_hints.input);
+            client_set_urgency(client, xcb_icccm_wm_hints_get_urgency(&wm_hints));
             refresh = 1;
         }
     }
@@ -538,7 +540,6 @@ int client_update_window_type(Client *client)
     }
 
     if (xcb_reply_contains_atom(type, g_ewmh._NET_WM_WINDOW_TYPE_DOCK)) {
-        client->mode = MODE_FLOATING;
         client_set_focusable(client, 0);
         client_set_sticky(client, 1);
         client->border_width = 0;
