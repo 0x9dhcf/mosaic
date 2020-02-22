@@ -1,27 +1,5 @@
 # BUGS
 
-## transient not always center on transient for window
-
-### Reproduce:
-
-    - Open firefox and download a file 
-    - Pop up is not centered
-
-### Resolution:
-
-Check X server request flushing when repositionning transient window.
-
-## Popup window could be 1x1 in size
-
-### Reproduce:
-
-    - Open firefox click on an email adress
-    - The application chooser pop up is centered but 1x1 (resizable though)
-
-### Resolution:
-
-Check X server request flushing when repositionning transient window.
-
 ## The event loop is not triggered by quit callback
 
 ### Reproduce:
@@ -31,14 +9,14 @@ Check X server request flushing when repositionning transient window.
 
 ### Resolution:
 
-Check why the set input focus on root is not catched.
+Check why the set input focus on root is not catched. Use select on the xcb fd.
 
-## When fullscreen abd changing tags, focused monitor and tagsets are no more consistent
+## When fullscreen and changing tags, focused monitor and tagsets are not consistent anymore
 
 ### Reproduce:
 
     - Set a window fullscreen
-    - Set monitor tag to an other tag
+    - Set monitor tag to another tag
     - Set the window normal size
 
 ### Resolution:

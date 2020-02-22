@@ -106,6 +106,9 @@ extern Shortcut         g_shortcuts[];
 
 void quit();
 
+/* monitors */
+void scan_monitors();
+
 /* windows */
 void manage(xcb_window_t window);
 Client * lookup(xcb_window_t window);
@@ -120,9 +123,6 @@ void focus_next_monitor();
 void focus_previous_monitor();
 
 /* focused monitor */
-void focused_monitor_show_hud();
-void focused_monitor_hide_hud();
-void focused_monitor_render();
 void focused_monitor_increase_main_views();
 void focused_monitor_decrease_main_views();
 void focused_monitor_set_layout(Layout layout);

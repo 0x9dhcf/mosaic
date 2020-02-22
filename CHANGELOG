@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 ### Added
+    - Multihead support.
 ### Changed
 ### Deprecated
 ### Removed
@@ -9,6 +10,7 @@
     - Some windows (e.g. firefox dialog) are created wit a size of 1x1,
       the wm shoul rely on size hints (especially min size) to display
       properly the window. Apply the size hints at client creation time.
+    - Allow the move of sticky windows.
 
 ### Security
 
