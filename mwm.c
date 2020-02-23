@@ -232,7 +232,7 @@ void setup_atoms()
 
 void setup_window_manager()
 {
-    /* setup the window manager */
+    /* check if a window manager is already running */
     xcb_void_cookie_t checkwm = xcb_change_window_attributes_checked(
             g_xcb,
             g_root,
@@ -561,7 +561,6 @@ static void add_new_monitors(Monitor *scanned)
 static void del_old_monitors(Monitor *scanned)
 {
     Monitor *m, *n;
-    //for (m = monitor_head, n = m->next; m && n;  m = n, n = m->next) {
     m = monitor_head;
     while (m) {
          /* check if already exists */
@@ -585,11 +584,10 @@ static void del_old_monitors(Monitor *scanned)
                 m->y,
                 m->width,
                 m->height);
-       
+
         Client *c, *d;
         c = m->head;
         while (c) {
-        //for (c = m->head, d = c->next; c; c = d, d = c->next) {
             d = c->next;
             monitor_detach(m, c);
             monitor_attach(primary_monitor, c);
@@ -599,7 +597,7 @@ static void del_old_monitors(Monitor *scanned)
         n = m->next;
         del_monitor(m);
         free(m);
-        m = n; 
+        m = n;
     }
 }
 
@@ -1060,7 +1058,9 @@ static void swap(Client *c1, Client *c2) {
 
 void focused_client_move_up()
 {
-    if (! focused_client)
+    if (! focused_client ||
+            (focused_client &&
+                IS_CLIENT_STATE(focused_client, STATE_FULLSCREEN)))
         return;
 
     if (focused_client->mode == MODE_FLOATING) {
@@ -1077,7 +1077,9 @@ void focused_client_move_up()
 
 void focused_client_move_down()
 {
-    if (! focused_client)
+    if (! focused_client ||
+            (focused_client &&
+                IS_CLIENT_STATE(focused_client, STATE_FULLSCREEN)))
         return;
 
     if (focused_client->mode == MODE_FLOATING) {
@@ -1094,7 +1096,9 @@ void focused_client_move_down()
 
 void focused_client_move_left()
 {
-    if (! focused_client)
+    if (! focused_client ||
+            (focused_client &&
+                IS_CLIENT_STATE(focused_client, STATE_FULLSCREEN)))
         return;
 
     if (focused_client->mode == MODE_FLOATING) {
@@ -1111,7 +1115,9 @@ void focused_client_move_left()
 
 void focused_client_move_right()
 {
-    if (! focused_client)
+    if (! focused_client ||
+            (focused_client &&
+                IS_CLIENT_STATE(focused_client, STATE_FULLSCREEN)))
         return;
 
     if (focused_client->mode == MODE_FLOATING) {
