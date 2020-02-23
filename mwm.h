@@ -130,7 +130,6 @@ void focused_monitor_set_tag(int tag);
 void focused_monitor_toggle_tag(int tag);
 
 /* focused client */
-void focused_client_render();
 void focused_client_kill();
 void focused_client_toggle_mode();
 void focused_client_move_up();
