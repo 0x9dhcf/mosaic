@@ -881,11 +881,10 @@ void unfocus(Client *client) {
     xcb_flush(g_xcb);
 }
 
-#define CHECK_FOCUSED if (! focused_client) return;
-
 void focus_next_client()
 {
-    CHECK_FOCUSED
+    if (! focused_client)
+        return;
 
     Client *c = client_next(focused_client, MODE_ANY, STATE_FOCUSABLE);
     if (c) {
@@ -902,7 +901,8 @@ void focus_next_client()
 
 void focus_previous_client()
 {
-    CHECK_FOCUSED
+    if (! focused_client)
+        return;
 
     Client *c = client_previous(focused_client, MODE_ANY, STATE_FOCUSABLE);
     if (c) {
@@ -988,7 +988,8 @@ void focused_monitor_toggle_tag(int tag)
 
 void focused_client_kill()
 {
-    CHECK_FOCUSED
+    if (! focused_client)
+        return;
 
     xcb_kill_client(g_xcb, focused_client->window);
     xcb_flush(g_xcb);
@@ -996,7 +997,8 @@ void focused_client_kill()
 
 void focused_client_toggle_mode()
 {
-    CHECK_FOCUSED
+    if (! focused_client)
+        return;
 
     if (IS_CLIENT_STATE(focused_client, STATE_FULLSCREEN) ||
             IS_CLIENT_STATE(focused_client, STATE_STICKY))
@@ -1058,7 +1060,8 @@ static void swap(Client *c1, Client *c2) {
 
 void focused_client_move_up()
 {
-    CHECK_FOCUSED
+    if (! focused_client)
+        return;
 
     if (focused_client->mode == MODE_FLOATING) {
         focused_client->f_y -= MOVE_INC;
@@ -1074,7 +1077,8 @@ void focused_client_move_up()
 
 void focused_client_move_down()
 {
-    CHECK_FOCUSED
+    if (! focused_client)
+        return;
 
     if (focused_client->mode == MODE_FLOATING) {
         focused_client->f_y += MOVE_INC;
@@ -1090,7 +1094,8 @@ void focused_client_move_down()
 
 void focused_client_move_left()
 {
-    CHECK_FOCUSED
+    if (! focused_client)
+        return;
 
     if (focused_client->mode == MODE_FLOATING) {
         focused_client->f_x -= MOVE_INC;
@@ -1106,7 +1111,8 @@ void focused_client_move_left()
 
 void focused_client_move_right()
 {
-    CHECK_FOCUSED
+    if (! focused_client)
+        return;
 
     if (focused_client->mode == MODE_FLOATING) {
         focused_client->f_x += MOVE_INC;
@@ -1122,7 +1128,8 @@ void focused_client_move_right()
 
 void focused_client_to_next_monitor()
 {
-    CHECK_FOCUSED
+    if (! focused_client)
+        return;
 
     if (focused_client->monitor->next) {
         Client *c = focused_client;
@@ -1140,7 +1147,8 @@ void focused_client_to_next_monitor()
 
 void focused_client_to_previous_monitor()
 {
-    CHECK_FOCUSED
+    if (! focused_client)
+        return;
 
     if (focused_client->monitor->prev) {
         Client *c = focused_client;
@@ -1163,7 +1171,8 @@ void focused_client_to_previous_monitor()
 
 void focused_client_increase_width()
 {
-    CHECK_FOCUSED
+    if (! focused_client)
+        return;
 
     if (focused_client->mode == MODE_FLOATING) {
         focused_client->f_width += SIZE_INC;
@@ -1181,7 +1190,8 @@ void focused_client_increase_width()
 
 void focused_client_decrease_width()
 {
-    CHECK_FOCUSED
+    if (! focused_client)
+        return;
 
     if (focused_client->mode == MODE_FLOATING) {
         focused_client->f_width -= SIZE_INC;
@@ -1199,7 +1209,8 @@ void focused_client_decrease_width()
 
 void focused_client_increase_height()
 {
-    CHECK_FOCUSED
+    if (! focused_client)
+        return;
 
     if (focused_client->mode == MODE_FLOATING) {
         focused_client->f_height += SIZE_INC;
@@ -1217,7 +1228,8 @@ void focused_client_increase_height()
 
 void focused_client_decrease_height()
 {
-    CHECK_FOCUSED
+    if (! focused_client)
+        return;
 
     if (focused_client->mode == MODE_FLOATING) {
         focused_client->f_height -= SIZE_INC;
@@ -1236,7 +1248,8 @@ void focused_client_decrease_height()
 /* set this tag and this tag only */
 void focused_client_set_tag(int tag)
 {
-    CHECK_FOCUSED
+    if (! focused_client)
+        return;
 
     /* do not change tagset of fullscreen client */
     if (IS_CLIENT_STATE(focused_client, STATE_FULLSCREEN))
@@ -1261,7 +1274,9 @@ void focused_client_set_tag(int tag)
 /* add or remove this tag */
 void focused_client_toggle_tag(int tag)
 {
-    CHECK_FOCUSED
+    if (! focused_client)
+        return;
+
     /* do not change tagset of fullscreen client */
     if (IS_CLIENT_STATE(focused_client, STATE_FULLSCREEN))
         return;
