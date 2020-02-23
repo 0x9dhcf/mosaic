@@ -64,7 +64,7 @@ unsigned int    g_urgent_color      = 0xff0000;
 
 Shortcut g_shortcuts[] = {
     /* global */
-    {{K_MS,     XKB_KEY_Home},          CB_VOID, {quit}, {0}},
+    {{K_MS,     XKB_KEY_Home},      CB_VOID,    {quit}, {0}},
 
     /* focus */
     {{K_M,      XKB_KEY_Left},      CB_VOID,    {focus_previous_client},                {}},
@@ -1072,12 +1072,6 @@ void focused_monitor_toggle_tag(int tag)
     monitor_render(focused_monitor);
     hints_set_monitor(focused_monitor);
     xcb_flush(g_xcb);
-}
-
-void focused_client_render()
-{
-    CHECK_FOCUSED
-    client_show(focused_client);
 }
 
 void focused_client_kill()
