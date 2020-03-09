@@ -259,10 +259,8 @@ void monitor_attach(Monitor *monitor, Client *client)
 
     /* default policy for floatings other than fixed
      * is to be centered on the monitor */
-    if (IS_CLIENT_STATE_NOT(client, STATE_STICKY)) {
-        client->f_x = monitor->x + (monitor->width - client->f_width) / 2;
-        client->f_y = monitor->y + (monitor->height - client->f_height) / 2;
-    }
+    client->f_x = monitor->x + (monitor->width - client->f_width) / 2;
+    client->f_y = monitor->y + (monitor->height - client->f_height) / 2;
 }
 
 void monitor_detach(Monitor *monitor, Client *client)
