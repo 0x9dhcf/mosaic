@@ -336,11 +336,11 @@ void on_client_message(xcb_client_message_event_t *e)
             if (IS_CLIENT_STATE_NOT(c, STATE_URGENT)  &&
                     (e->data.data32[0] ==  XCB_EWMH_WM_STATE_ADD ||
                      e->data.data32[0] ==  XCB_EWMH_WM_STATE_TOGGLE))
-                client_set_urgency(c, 1);
+                client_set_urgent(c, 1);
             if (IS_CLIENT_STATE(c, STATE_URGENT)  &&
                     (e->data.data32[0] ==  XCB_EWMH_WM_STATE_REMOVE ||
                      e->data.data32[0] ==  XCB_EWMH_WM_STATE_TOGGLE))
-                client_set_urgency(c, 0);
+                client_set_urgent(c, 0);
             /* Check if the urgent flag must be set */
             /*
             if (e->data.data32[0] == XCB_EWMH_WM_STATE_ADD)
