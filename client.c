@@ -39,7 +39,7 @@ int xcb_reply_contains_atom(xcb_get_property_reply_t *reply, xcb_atom_t atom)
     if ((atoms = xcb_get_property_value(reply)) == NULL)
         return 0;
 
-    for (int i = 0; i < xcb_get_property_value_length(reply) / (reply->format / 8); i++)
+    for (int i = 0; i < xcb_get_property_value_length(reply) / (reply->format / 8); ++i)
         if (atoms[i] == atom)
             return 1;
 
@@ -56,7 +56,6 @@ void client_initialize(Client *client, xcb_window_t window)
     client->border_width = g_border_width;
     client->border_color = g_normal_color;
     client->mode = MODE_TILED;
-    client->saved_mode = MODE_TILED;
     client->state = STATE_FOCUSABLE;
     client->reserved_top = 0;
     client->reserved_bottom = 0;
@@ -115,7 +114,7 @@ void client_initialize(Client *client, xcb_window_t window)
                 transient);
         free(transient);
 
-    /* keep track of event f interrest */
+    /* keep track of event of interrest */
     xcb_change_window_attributes(
             g_xcb,
             window,
@@ -201,19 +200,17 @@ void client_set_fullscreen(Client *client, int fullscreen)
 {
     if (fullscreen) {
         client->border_width = 0;
-        client->saved_mode = client->mode;
         client->saved_tagset = client->tagset;
         client->tagset = 0; /* visible on all monitor's tags */
         CLIENT_SET_STATE(client, STATE_FULLSCREEN);
     } else {
-        client->mode = client->saved_mode;
         client->tagset = client->saved_tagset;
         client->border_width = g_border_width;
         CLIENT_UNSET_STATE(client, STATE_FULLSCREEN);
     }
 }
 
-void client_set_urgency(Client *client, int urgency)
+void client_set_urgent(Client *client, int urgency)
 {
     DEBUG_FUNCTION;
     if (urgency)
@@ -495,14 +492,14 @@ int client_update_wm_hints(Client *client)
     }
 
     client_set_focusable(client, 1);
-    client_set_urgency(client, 0);
+    client_set_urgent(client, 0);
 
     if (xcb_get_property_value_length(hints) != 0) {
         xcb_icccm_wm_hints_t wm_hints;
         if (xcb_icccm_get_wm_hints_from_reply(&wm_hints, hints)) {
             if (wm_hints.flags & XCB_ICCCM_WM_HINT_INPUT)
                 client_set_focusable(client, wm_hints.input);
-            client_set_urgency(client, xcb_icccm_wm_hints_get_urgency(&wm_hints));
+            client_set_urgent(client, xcb_icccm_wm_hints_get_urgency(&wm_hints));
             refresh = 1;
         }
     }
