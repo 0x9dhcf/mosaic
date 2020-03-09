@@ -56,7 +56,6 @@ typedef struct _Client {
     int             border_width;
     int             border_color;
     Mode            mode;
-    Mode            saved_mode;
     State           state;
     int             reserved_top;
     int             reserved_bottom;
@@ -90,7 +89,7 @@ void client_initialize(Client *client, xcb_window_t window);
 void client_set_focusable(Client *client, int focusable);
 void client_set_sticky(Client *client, int sticky);
 void client_set_fullscreen(Client *client, int fullscreen);
-void client_set_urgency(Client *client, int urgency);
+void client_set_urgent(Client *client, int urgency);
 void client_hide(Client *client);
 void client_show(Client *client);
 void client_apply_size_hints(Client *client);
