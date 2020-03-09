@@ -815,8 +815,22 @@ void forget(xcb_window_t window)
     if (!c)
         return;
 
-    if (c == focused_client)
-        focused_client = NULL;
+    if (c == focused_client) {
+        Client *f = NULL;
+        if (c == c->monitor->head)
+            f = client_next(c, MODE_ANY, STATE_FOCUSABLE);
+        else
+           f = client_previous(c, MODE_ANY, STATE_FOCUSABLE);
+        
+        if (f)
+            xcb_set_input_focus(
+                    g_xcb,
+                    XCB_INPUT_FOCUS_POINTER_ROOT,
+                    f->window,
+                    XCB_CURRENT_TIME);
+        else
+            focused_client = NULL;
+    }
 
     Monitor *m = c->monitor;
     monitor_detach(c->monitor, c);
@@ -833,7 +847,9 @@ void forget(xcb_window_t window)
                     g_ewmh._NET_CLIENT_LIST,
                     XCB_ATOM_WINDOW, 32, 1, &it->window);
 
-    check_focus_consistency();
+    /* we did not flush yet for the consistency to be properly checked */
+    if (! focused_client)
+        check_focus_consistency();
     hints_set_monitor(focused_monitor);
     hints_set_focused(focused_client);
     xcb_flush(g_xcb);
@@ -1021,7 +1037,6 @@ void focused_client_toggle_mode()
     (c1)->border_width = (c2)->border_width;\
     (c1)->border_color = (c2)->border_color;\
     (c1)->mode = (c2)->mode;\
-    (c1)->saved_mode = (c2)->saved_mode;\
     (c1)->state = (c2)->state;\
     (c1)->reserved_top = (c2)->reserved_top;\
     (c1)->reserved_bottom = (c2)->reserved_bottom;\
