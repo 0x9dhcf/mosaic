@@ -126,7 +126,7 @@ void client_initialize(Client *client, xcb_window_t window)
                 XCB_EVENT_MASK_PROPERTY_CHANGE |
                 XCB_EVENT_MASK_STRUCTURE_NOTIFY });
 
-    /* grab buttons, clicks should focus windows */
+    /* grab buttons */
     xcb_grab_button(
             g_xcb,
             1,

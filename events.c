@@ -398,7 +398,9 @@ void on_button_press(xcb_button_press_event_t *e)
         return;*/
 
     Client *c = lookup(e->event);
-    if (c && IS_CLIENT_STATE(c, STATE_FOCUSABLE))
+
+    if (c && IS_CLIENT_STATE(c, STATE_FOCUSABLE)
+            && e->detail == XCB_BUTTON_INDEX_1)
         xcb_set_input_focus(
                 g_xcb,
                 XCB_INPUT_FOCUS_POINTER_ROOT,
