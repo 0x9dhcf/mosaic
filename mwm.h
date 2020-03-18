@@ -126,6 +126,8 @@ void focus_previous_monitor();
 void focused_monitor_increase_main_views();
 void focused_monitor_decrease_main_views();
 void focused_monitor_set_layout(Layout layout);
+void focused_monitor_rotate_clockwise();
+void focused_monitor_rotate_counter_clockwise();
 void focused_monitor_set_tag(int tag);
 void focused_monitor_toggle_tag(int tag);
 
