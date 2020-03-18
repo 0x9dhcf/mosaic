@@ -212,7 +212,6 @@ void client_set_fullscreen(Client *client, int fullscreen)
 
 void client_set_urgent(Client *client, int urgency)
 {
-    DEBUG_FUNCTION;
     if (urgency)
         CLIENT_SET_STATE(client, STATE_URGENT);
     else
@@ -307,15 +306,25 @@ void client_show(Client *client)
                 XCB_CONFIG_WINDOW_Y |
                 XCB_CONFIG_WINDOW_WIDTH |
                 XCB_CONFIG_WINDOW_HEIGHT |
-                XCB_CONFIG_WINDOW_BORDER_WIDTH |
-                XCB_CONFIG_WINDOW_STACK_MODE,
+                XCB_CONFIG_WINDOW_BORDER_WIDTH,
                 (const int []) {
                     x, y,
                     w, h,
-                    client->border_width,
-                    client->mode == MODE_FLOATING ||
-                            IS_CLIENT_STATE(client, STATE_FULLSCREEN) ?
-                            XCB_STACK_MODE_ABOVE : XCB_STACK_MODE_BELOW });
+                    client->border_width });
+
+        if (client->mode == MODE_TILED)
+            xcb_configure_window(
+                    g_xcb,
+                    client->window,
+                    XCB_CONFIG_WINDOW_STACK_MODE, 
+                    (const int []) { XCB_STACK_MODE_BELOW });
+
+        if (IS_CLIENT_STATE(client, STATE_FULLSCREEN))
+            xcb_configure_window(
+                    g_xcb,
+                    client->window,
+                    XCB_CONFIG_WINDOW_STACK_MODE, 
+                    (const int []) { XCB_STACK_MODE_ABOVE });
 
         xcb_ungrab_pointer(g_xcb, XCB_CURRENT_TIME);
     }
