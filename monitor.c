@@ -35,7 +35,41 @@
 #define DEFAULT_SPLIT .6
 #define DEFAULT_MAINS 1
 
-static void apply_none_layout(Monitor *m, int w_x, int w_y, int w_w, int w_h)
+static void apply_none_layout(
+        Monitor *m,
+        int w_x,
+        int w_y,
+        int w_w,
+        int w_h);
+static void horizontal_layout(
+        Monitor *m,
+        int mains, int stacked,
+        int main_x, int main_y, int main_w, int main_h,
+        int stack_x, int stack_y, int stack_w, int stack_h, int stack_r);
+static void apply_right_layout(
+        Monitor *m,
+        int mains, int stacked,
+        int w_x, int w_y, int w_w, int w_h);
+static void apply_left_layout(
+        Monitor *m,
+        int mains, int stacked,
+        int w_x, int w_y, int w_w, int w_h);
+static void vertical_layout(
+        Monitor *m,
+        int mains, int stacked,
+        int main_x, int main_y, int main_w, int main_h,
+        int stack_x, int stack_y, int stack_w, int stack_h, int stack_r);
+static void apply_bottom_layout(
+        Monitor *m,
+        int mains, int stacked,
+        int w_x, int w_y, int w_w, int w_h);
+static void apply_top_layout(
+        Monitor *m,
+        int mains, int stacked,
+        int w_x, int w_y, int w_w, int w_h);
+
+
+void apply_none_layout(Monitor *m, int w_x, int w_y, int w_w, int w_h)
 {
     Client *c;
     for (c = m->head; c; c = c->next)
@@ -47,7 +81,7 @@ static void apply_none_layout(Monitor *m, int w_x, int w_y, int w_w, int w_h)
        }
 }
 
-static void horizontal_layout(
+void horizontal_layout(
         Monitor *m,
         int mains, int stacked,
         int main_x, int main_y, int main_w, int main_h,
@@ -83,7 +117,7 @@ static void horizontal_layout(
     }
 }
 
-static void apply_right_layout(
+void apply_right_layout(
         Monitor *m,
         int mains, int stacked,
         int w_x, int w_y, int w_w, int w_h)
@@ -108,7 +142,7 @@ static void apply_right_layout(
             stack_x, stack_y, stack_w, stack_h, stack_r);
 }
 
-static void apply_left_layout(
+void apply_left_layout(
         Monitor *m,
         int mains, int stacked,
         int w_x, int w_y, int w_w, int w_h)
@@ -133,7 +167,7 @@ static void apply_left_layout(
             stack_x, stack_y, stack_w, stack_h, stack_r);
 }
 
-static void vertical_layout(
+void vertical_layout(
         Monitor *m,
         int mains, int stacked,
         int main_x, int main_y, int main_w, int main_h,
@@ -169,7 +203,7 @@ static void vertical_layout(
     }
 }
 
-static void apply_bottom_layout(
+void apply_bottom_layout(
         Monitor *m,
         int mains, int stacked,
         int w_x, int w_y, int w_w, int w_h)
@@ -194,7 +228,7 @@ static void apply_bottom_layout(
             stack_x, stack_y, stack_w, stack_h, stack_r);
 }
 
-static void apply_top_layout(
+void apply_top_layout(
         Monitor *m,
         int mains, int stacked,
         int w_x, int w_y, int w_w, int w_h)
@@ -323,11 +357,17 @@ void monitor_render(Monitor *monitor)
     int mains = tilables < monitor->mains ? tilables : monitor->mains;
     int stacked = (tilables - mains) > 0 ? (tilables - mains ) : 0;
 
+#ifndef NDEBUG
     DEBUG("rendering: %s - (%d, %d), [%d x %d]", monitor->name, wx, wy, ww, wh);
-    DEBUG("tilables: %d", tilables);
-    DEBUG("mains: %d", mains);
-    DEBUG("stacked: %d", stacked);
-    DEBUG("fullscreen: %d", fullscreen);
+    DEBUG("\ttilables: %d", tilables);
+    DEBUG("\tmains: %d", mains);
+    DEBUG("\tstacked: %d", stacked);
+    DEBUG("\tfullscreen: %d", fullscreen);
+    DEBUG("\thead: %p", monitor->head);
+    DEBUG("\ttail: %p", monitor->tail);
+    for (Client *c = monitor->head; c; c = c->next)
+        DEBUG("\tclient: %p", c);
+#endif
     /* compute tiles positions */
     if (tilables && !fullscreen) {
         switch(monitor->layout) {
