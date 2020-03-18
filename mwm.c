@@ -82,6 +82,8 @@ Shortcut g_shortcuts[] = {
     {{K_MC,     XKB_KEY_Left},      CB_INT,     {focused_monitor_set_layout},           {LT_LEFT}},
     {{K_MC,     XKB_KEY_Down},      CB_INT,     {focused_monitor_set_layout},           {LT_BOTTOM}},
     {{K_MC,     XKB_KEY_Up},        CB_INT,     {focused_monitor_set_layout},           {LT_TOP}},
+    {{K_M,      XKB_KEY_Tab},       CB_VOID,    {focused_monitor_rotate_clockwise},     {}},
+    {{K_MS,     XKB_KEY_Tab},       CB_VOID,    {focused_monitor_rotate_counter_clockwise}, {}},
     {{K_M,      XKB_KEY_1},         CB_INT,     {focused_monitor_set_tag},              {1}},
     {{K_M,      XKB_KEY_2},         CB_INT,     {focused_monitor_set_tag},              {2}},
     {{K_M,      XKB_KEY_3},         CB_INT,     {focused_monitor_set_tag},              {3}},
@@ -821,7 +823,7 @@ void forget(xcb_window_t window)
             f = client_next(c, MODE_ANY, STATE_FOCUSABLE);
         else
            f = client_previous(c, MODE_ANY, STATE_FOCUSABLE);
-        
+
         if (f)
             xcb_set_input_focus(
                     g_xcb,
@@ -974,6 +976,58 @@ void focused_monitor_set_layout(Layout layout)
         monitor_render(focused_monitor);
         xcb_flush(g_xcb);
     }
+}
+
+void focused_monitor_rotate_clockwise()
+{
+    if (! focused_monitor->tail)
+        return;
+
+    /* find the last tilable */
+    Client *c = focused_monitor->tail->mode == MODE_TILED ?
+            focused_monitor->tail :
+            client_previous(focused_monitor->tail, MODE_TILED, STATE_ANY);
+
+    if (!c || c == focused_monitor->head)
+        return;
+
+    /* move it to the head */
+    if (c->prev) c->prev->next = c->next;
+    if (c->next) c->next->prev = c->prev;
+    if (! c->next) focused_monitor->tail = c->prev;
+    c->prev = NULL;
+    c->next = focused_monitor->head;
+    focused_monitor->head->prev = c;
+    focused_monitor->head = c;
+
+    monitor_render(focused_monitor);
+    xcb_flush(g_xcb);
+}
+
+void focused_monitor_rotate_counter_clockwise()
+{
+    if (! focused_monitor->head)
+        return;
+
+    /* find the first tilable */
+    Client *c = focused_monitor->head->mode == MODE_TILED ?
+            focused_monitor->head :
+            client_next(focused_monitor->head, MODE_TILED, STATE_ANY);
+
+    if (!c || c == focused_monitor->tail)
+        return;
+
+    /* move it to the tail */
+    if (c->prev) c->prev->next = c->next;
+    if (c->next) c->next->prev = c->prev;
+    if (! c->prev) focused_monitor->head = c->next;
+    c->next = NULL;
+    c->prev = focused_monitor->tail;
+    focused_monitor->tail->next = c;
+    focused_monitor->tail = c;
+
+    monitor_render(focused_monitor);
+    xcb_flush(g_xcb);
 }
 
 /* set this tag and this tag only */
@@ -1385,10 +1439,12 @@ int main(int argc, char **argv)
     home = getenv("HOME");
     if (home) {
         snprintf(autostart, sizeof(autostart), "%s/%s", home, AUTOSTART);
-        if (stat(autostart, &st) == 0 && st.st_mode & S_IXUSR)
+        if (stat(autostart, &st) == 0 && st.st_mode & S_IXUSR) {
+            INFO("execute: %s.", autostart);
             system(autostart);
-        else
+        } else {
             INFO("no mwmrc found.");
+        }
     }
 #endif
 
