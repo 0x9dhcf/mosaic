@@ -162,7 +162,7 @@ void on_map_request(xcb_map_request_event_t *e)
 /* TODO
 static void on_mapping_notify(xcb_mapping_notify_event_t *e)
 {
-    // TODO: Keyboard Change
+    TODO: Keyboard Change
 }
 */
 
@@ -250,67 +250,63 @@ void on_enter_notify(xcb_enter_notify_event_t *e)
     }
 }
 
-// NOT A SO BAD IDEA!!!!
-//static void on_root_message(xcb_client_message_event_t *e)
-//{
-//    if (e->type == g_atoms[MWM_QUIT])
-//        quit();
-//
-//    if (e->type == g_atoms[MWM_FOCUS_PREVIOUS_CLIENT])
-//        focus_previous_client();
-//    if (e->type == g_atoms[MWM_FOCUS_NEXT_CLIENT])
-//        focus_next_client();
-//    if (e->type == g_atoms[MWM_FOCUS_PREVIOUS_MONITOR])
-//        focus_previous_monitor();
-//    if (e->type == g_atoms[MWM_FOCUS_NEXT_MONITOR])
-//        focus_next_monitor();
-//
-//    if (e->type == g_atoms[MWM_FOCUSED_MONITOR_INCREASE_MAIN_VIEWS])
-//        focused_monitor_increase_main_views();
-//    if (e->type == g_atoms[MWM_FOCUSED_MONITOR_INCREASE_MAIN_VIEWS])
-//        focused_monitor_decrease_main_views();
-//    if (e->type == g_atoms[MWM_FOCUSED_MONITOR_SET_LAYOUT])
-//        focused_monitor_set_layout(e->data.data32[0]);
-//    if (e->type == g_atoms[MWM_FOCUSED_MONITOR_SET_TAG])
-//        focused_monitor_set_tag(e->data.data32[0]);
-//    if (e->type == g_atoms[MWM_FOCUSED_MONITOR_TOGGLE_TAG])
-//        focused_Monitoroggle_tag(e->data.data32[0]);
-//
-//    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_KILL])
-//        focused_client_kill();
-//    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_MOVE_UP])
-//        focused_client_move_up();
-//    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_MOVE_DOWN])
-//        focused_client_move_down();
-//    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_MOVE_LEFT])
-//        focused_client_move_left();
-//    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_MOVE_RIGHT])
-//        focused_client_move_right();
-//    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_TO_NEXT_MONITOR])
-//        focused_Cliento_next_monitor();
-//    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_TO_PREVIOUS_MONITOR])
-//        focused_Cliento_previous_monitor();
-//    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_DECREASE_WIDTH])
-//        focused_client_decrease_width();
-//    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_INCREASE_WIDTH])
-//        focused_client_increase_width();
-//    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_DECREASE_HEIGHT])
-//        focused_client_decrease_height();
-//    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_INCREASE_HEIGHT])
-//        focused_client_increase_height();
-//    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_SET_TAG])
-//        focused_client_set_tag(e->data.data32[0]);
-//    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_TOGGLE_TAG])
-//        focused_Clientoggle_tag(e->data.data32[0]);
-//}
+/* NOT A SO BAD IDEA!!!!
+static void on_root_message(xcb_client_message_event_t *e)
+{
+    if (e->type == g_atoms[MWM_QUIT])
+        quit();
+
+    if (e->type == g_atoms[MWM_FOCUS_PREVIOUS_CLIENT])
+        focus_previous_client();
+    if (e->type == g_atoms[MWM_FOCUS_NEXT_CLIENT])
+        focus_next_client();
+    if (e->type == g_atoms[MWM_FOCUS_PREVIOUS_MONITOR])
+        focus_previous_monitor();
+    if (e->type == g_atoms[MWM_FOCUS_NEXT_MONITOR])
+        focus_next_monitor();
+
+    if (e->type == g_atoms[MWM_FOCUSED_MONITOR_INCREASE_MAIN_VIEWS])
+        focused_monitor_increase_main_views();
+    if (e->type == g_atoms[MWM_FOCUSED_MONITOR_INCREASE_MAIN_VIEWS])
+        focused_monitor_decrease_main_views();
+    if (e->type == g_atoms[MWM_FOCUSED_MONITOR_SET_LAYOUT])
+        focused_monitor_set_layout(e->data.data32[0]);
+    if (e->type == g_atoms[MWM_FOCUSED_MONITOR_SET_TAG])
+        focused_monitor_set_tag(e->data.data32[0]);
+    if (e->type == g_atoms[MWM_FOCUSED_MONITOR_TOGGLE_TAG])
+        focused_Monitoroggle_tag(e->data.data32[0]);
+
+    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_KILL])
+        focused_client_kill();
+    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_MOVE_UP])
+        focused_client_move_up();
+    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_MOVE_DOWN])
+        focused_client_move_down();
+    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_MOVE_LEFT])
+        focused_client_move_left();
+    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_MOVE_RIGHT])
+        focused_client_move_right();
+    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_TO_NEXT_MONITOR])
+        focused_Cliento_next_monitor();
+    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_TO_PREVIOUS_MONITOR])
+        focused_Cliento_previous_monitor();
+    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_DECREASE_WIDTH])
+        focused_client_decrease_width();
+    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_INCREASE_WIDTH])
+        focused_client_increase_width();
+    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_DECREASE_HEIGHT])
+        focused_client_decrease_height();
+    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_INCREASE_HEIGHT])
+        focused_client_increase_height();
+    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_SET_TAG])
+        focused_client_set_tag(e->data.data32[0]);
+    if (e->type == g_atoms[MWM_FOCUSED_CLIENT_TOGGLE_TAG])
+        focused_Clientoggle_tag(e->data.data32[0]);
+}
+*/
 
 void on_client_message(xcb_client_message_event_t *e)
 {
-//    if (e->window == g_root) {
-//        on_root_message(e);
-//        return;
-//    }
-
     /* TODO: STICKY */
     int refresh = 0;
     Client *c = lookup(e->window);
@@ -346,15 +342,6 @@ void on_client_message(xcb_client_message_event_t *e)
                     (e->data.data32[0] ==  XCB_EWMH_WM_STATE_REMOVE ||
                      e->data.data32[0] ==  XCB_EWMH_WM_STATE_TOGGLE))
                 client_set_urgent(c, 0);
-            /* Check if the urgent flag must be set */
-            /*
-            if (e->data.data32[0] == XCB_EWMH_WM_STATE_ADD)
-                client_set_urgency(c, 1);
-            else if (e->data.data32[0] == XCB_EWMH_WM_STATE_REMOVE)
-                client_set_urgency(c, 0);
-            else if (e->data.data32[0] == XCB_EWMH_WM_STATE_TOGGLE)
-                client_set_urgency(c, IS_CLIENT_STATE(c, STATE_URGENT));
-            */
         } else if (STATE(e,  g_ewmh._NET_WM_STATE_MODAL)) {
             if (c->mode != MODE_FLOATING  &&
                     (e->data.data32[0] ==  XCB_EWMH_WM_STATE_ADD ||
@@ -418,19 +405,21 @@ void on_button_press(xcb_button_press_event_t *e)
     xcb_flush(g_xcb);
 }
 
-//static void on_keyboard_state_change(xcb_xkb_state_notify_event_t *e)
-//{
-//    /* Just keep track of modifiers for now.
-//     * keyboard or keymap changes etc.. see i3 or i3lock */
-//    xkb_state_update_mask(
-//            g_xkb_state,
-//            e->baseMods,
-//            e->latchedMods,
-//            e->lockedMods,
-//            e->baseGroup,
-//            e->latchedGroup,
-//            e->lockedGroup);
-//}
+/* TODO
+static void on_keyboard_state_change(xcb_xkb_state_notify_event_t *e)
+{
+     * Just keep track of modifiers for now.
+     * keyboard or keymap changes etc.. see i3 or i3lock
+    xkb_state_update_mask(
+            g_xkb_state,
+            e->baseMods,
+            e->latchedMods,
+            e->lockedMods,
+            e->baseGroup,
+            e->latchedGroup,
+            e->lockedGroup);
+}
+*/
 
 void on_key_press(xcb_key_press_event_t *e)
 {
@@ -466,18 +455,17 @@ void on_event(xcb_generic_event_t *event)
         case XCB_MAP_REQUEST:
             on_map_request((xcb_map_request_event_t *)event);
             break;
-        //case XCB_MAPPING_NOTIFY:
-        //    on_mapping_notify((xcb_mapping_notify_event_t *)event);
-        //    break;
+        /*
+        case XCB_MAPPING_NOTIFY:
+            on_mapping_notify((xcb_mapping_notify_event_t *)event);
+            break;
+        */
         case XCB_UNMAP_NOTIFY:
             on_unmap_notify((xcb_unmap_notify_event_t *)event);
             break;
         case XCB_PROPERTY_NOTIFY:
             on_property_notify((xcb_property_notify_event_t *)event);
             break;
-        //case XCB_EXPOSE:
-        //    on_expose((xcb_expose_event_t *)event);
-        //    break;
         case XCB_FOCUS_IN:
             on_focus_in((xcb_focus_in_event_t *)event);
             break;
@@ -493,24 +481,12 @@ void on_event(xcb_generic_event_t *event)
         case XCB_BUTTON_PRESS:
             on_button_press((xcb_button_press_event_t *)event);
             break;
-        //case XCB_BUTTON_RELEASE:
-        //    on_button_release((xcb_button_press_event_t *)event);
-        //    break;
         case XCB_KEY_PRESS:
             on_key_press((xcb_key_press_event_t *)event);
             break;
-        //case XCB_KEY_RELEASE:
-        //    on_key_release((xcb_key_press_event_t *)event);
-        //    break;
-        //case XCB_MOTION_NOTIFY:
-        //    on_motion_notify((xcb_motion_notify_event_t *)event);
-        //    break;
-        //case XCB_DESTROY_NOTIFY:
-        //    on_destroy_notify((xcb_destroy_notify_event_t *)event);
-        //    break;
-        // Doesn't seem to be triggered??
-        //case XCB_RANDR_SCREEN_CHANGE_NOTIFY:
-        //    scan_monitors();
-        //    break;
+        /* Doesn't seem to be triggered?? */
+        case XCB_RANDR_SCREEN_CHANGE_NOTIFY:
+            scan_monitors();
+            break;
     }
 }
