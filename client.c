@@ -90,7 +90,7 @@ void client_initialize(Client *client, xcb_window_t window)
 
     if (geometry) {
         client->t_x = client->f_x = geometry->x;
-        client->t_y = client->f_x = geometry->y;
+        client->t_y = client->f_y = geometry->y;
         client->t_width = client->f_width = geometry->width;
         client->t_height = client->f_height = geometry->height;
         free(geometry);
@@ -190,6 +190,12 @@ void client_set_sticky(Client *client, int sticky)
     if (sticky) {
         CLIENT_SET_STATE(client, STATE_STICKY);
         client->mode = MODE_FLOATING;
+        /* we use the tiled geometry as absolute geometry
+         * (relative to monitors) */
+        client->t_x = client->f_x;
+        client->t_y = client->f_y;
+        client->t_width = client->f_width;
+        client->t_height = client->f_height;
     } else {
         CLIENT_UNSET_STATE(client, STATE_STICKY);
         /* what should be the state now ??? */
@@ -276,6 +282,10 @@ void client_show(Client *client)
                         }
                     }
                 }
+                if (IS_CLIENT_STATE(client, STATE_STICKY)) {
+                    client->f_x = client->monitor->x + client->t_x;
+                    client->f_y = client->monitor->y + client->t_y;
+                }
                 x = client->f_x;
                 y = client->f_y;
                 w = client->f_width;
@@ -316,14 +326,14 @@ void client_show(Client *client)
             xcb_configure_window(
                     g_xcb,
                     client->window,
-                    XCB_CONFIG_WINDOW_STACK_MODE, 
+                    XCB_CONFIG_WINDOW_STACK_MODE,
                     (const int []) { XCB_STACK_MODE_BELOW });
 
         if (IS_CLIENT_STATE(client, STATE_FULLSCREEN))
             xcb_configure_window(
                     g_xcb,
                     client->window,
-                    XCB_CONFIG_WINDOW_STACK_MODE, 
+                    XCB_CONFIG_WINDOW_STACK_MODE,
                     (const int []) { XCB_STACK_MODE_ABOVE });
 
         xcb_ungrab_pointer(g_xcb, XCB_CURRENT_TIME);
@@ -408,7 +418,6 @@ int client_update_size_hints(Client *client)
         return 0;
     }
 
-    client_set_sticky(client, 0);
     client->base_width = client->base_height = 0;
     client->width_increment = client->height_increment = 0;
     client->max_width = client->max_height = 0;

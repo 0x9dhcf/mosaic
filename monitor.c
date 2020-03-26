@@ -68,7 +68,6 @@ static void apply_top_layout(
         int mains, int stacked,
         int w_x, int w_y, int w_w, int w_h);
 
-
 void apply_none_layout(Monitor *m, int w_x, int w_y, int w_w, int w_h)
 {
     Client *c;
@@ -322,19 +321,18 @@ void monitor_detach(Monitor *monitor, Client *client)
     client->monitor = NULL;
 }
 
-void monitor_render(Monitor *monitor)
+void monitor_render(Monitor *monitor, GeometryStatus status)
 {
     int tilables = 0;
     int fullscreen = 0;
     int rr = 0, rl = 0, rt = 0, rb = 0, wx = 0, wy = 0, ww = 0, wh = 0;
 
-    /* first round to get information about clients */
+    /* first round to get information about clients. */
     for (Client *c = monitor->head; c; c = c->next) {
         if (IS_CLIENT_STATE(c, STATE_FULLSCREEN))
             fullscreen++;
 
-        /* do not hide sticky nor those visible on all tagset */
-        if (IS_CLIENT_STATE_NOT(c, STATE_STICKY) && c->tagset)
+        if (IS_CLIENT_STATE_NOT(c, STATE_STICKY) || ! status)
             client_hide(c);
 
         if (c->mode == MODE_TILED && IS_VISIBLE(c))
@@ -394,7 +392,8 @@ void monitor_render(Monitor *monitor)
         /* if we have some fullscreen, display only those */
         if (fullscreen && IS_CLIENT_STATE_NOT(c, STATE_FULLSCREEN))
             continue;
-        if (IS_CLIENT_STATE_NOT(c, STATE_STICKY))
+
+        if (IS_CLIENT_STATE_NOT(c, STATE_STICKY) || ! status)
             client_show(c);
     }
 }

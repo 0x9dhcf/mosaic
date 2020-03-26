@@ -104,7 +104,9 @@ extern unsigned int     g_hud_font_size;
 extern Rule             g_rules[];
 extern Shortcut         g_shortcuts[]; 
 
+/* globals */
 void quit();
+void dump();
 
 /* monitors */
 void scan_monitors();
@@ -121,6 +123,7 @@ void focus_next_client();
 void focus_previous_client();
 void focus_next_monitor();
 void focus_previous_monitor();
+void focus_clicked_monitor(int x, int y);
 
 /* focused monitor */
 void focused_monitor_increase_main_views();

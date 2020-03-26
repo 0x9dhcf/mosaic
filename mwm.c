@@ -65,6 +65,7 @@ unsigned int    g_urgent_color      = 0xff0000;
 Shortcut g_shortcuts[] = {
     /* global */
     {{K_MS,     XKB_KEY_Home},      CB_VOID,    {quit}, {0}},
+    {{K_MS,     XKB_KEY_d},         CB_VOID,    {dump}, {0}},
 
     /* focus */
     {{K_M,      XKB_KEY_Left},      CB_VOID,    {focus_previous_client},                {}},
@@ -159,6 +160,7 @@ static void trap();
 static void usage();
 static void version();
 static unsigned int parse_color(const char* hex);
+static void swap(Client *c1, Client *c2);
 
 /* static variables */
 static const char *atom_names[MWM_ATOM_COUNT] = {
@@ -524,6 +526,21 @@ void cleanup_window_manager()
     xcb_ungrab_server(g_xcb);
 }
 
+static void update_monitors(Monitor *scanned)
+{
+    for (Monitor *ms = scanned; ms; ms = ms->next) {
+
+        for (Monitor *me = monitor_head; me; me = me->next) {
+            if (strcmp(me->name, ms->name) == 0) {
+                me->x = ms->x;
+                me->y = ms->y;
+                me->width = ms->width;
+                me->height = ms->height;
+            }
+        }
+    }
+}
+
 static void add_new_monitors(Monitor *scanned)
 {
     for (Monitor *ms = scanned; ms; ms = ms->next) {
@@ -652,6 +669,7 @@ void scan_monitors()
     }
     free(monitors_reply);
 
+    update_monitors(scanned);
     add_new_monitors(scanned);
     del_old_monitors(scanned);
 
@@ -707,9 +725,9 @@ void scan_monitors()
     check_focus_consistency();
     hints_set_monitor(focused_monitor);
 
-    /* render the primary in case of new clients
-     * from removed monitor(s) */
-    monitor_render(primary_monitor);
+    /* render the monitors with updated geometry */
+    for (Monitor *m = monitor_head; m; m = m->next)
+        monitor_render(m, GS_CHANGED);
     xcb_flush(g_xcb);
 }
 
@@ -759,6 +777,34 @@ void quit()
     xcb_flush(g_xcb);
 }
 
+void dump()
+{
+    FILE *f = fopen("/tmp/mwm.dump", "w");
+    if (!f)
+        return;
+
+    fprintf(f, "Screen: [%d x %d]\n",
+            g_screen->width_in_pixels,
+            g_screen->height_in_pixels);
+
+    for (Monitor *m = monitor_head; m; m = m->next) {
+        fprintf(f, "Monitor %s: (%d, %d) [%d, %d]\n",
+                m->name,
+                m->x, m->y,
+                m->width, m->height);
+        for (Client *c = m->head; c; c = c->next) {
+            fprintf(f, "\t %p: %s, %d\n", c, (char*[]) {"tiled", "floating"}[c->mode - 1], c->state);
+            fprintf(f, "\t\ttiled: (%d, %d) [%d, %d]\n",
+                    c->t_x, c->t_y,
+                    c->t_width, c->t_height);
+            fprintf(f, "\t\tfloating: (%d, %d) [%d, %d]\n",
+                    c->f_x, c->f_y,
+                    c->f_width, c->f_height);
+        }
+    }
+    fclose(f);
+}
+
 void manage(xcb_window_t window)
 {
     /* create the client */
@@ -771,11 +817,15 @@ void manage(xcb_window_t window)
         Client *t = lookup(c->transient);
         if (t) {
             monitor_attach(t->monitor, c);
-            monitor_render(t->monitor);
+            monitor_render(t->monitor, GS_UNCHANGED);
         }
+    } else if (IS_CLIENT_STATE(c, STATE_STICKY)) {
+        monitor_attach(primary_monitor, c);
+        monitor_render(primary_monitor, GS_UNCHANGED);
+        hints_set_monitor(primary_monitor);
     } else {
         monitor_attach(focused_monitor, c);
-        monitor_render(focused_monitor);
+        monitor_render(focused_monitor, GS_UNCHANGED);
         hints_set_monitor(focused_monitor);
     }
 
@@ -836,7 +886,7 @@ void forget(xcb_window_t window)
 
     Monitor *m = c->monitor;
     monitor_detach(c->monitor, c);
-    monitor_render(m);
+    monitor_render(m, GS_UNCHANGED);
     free(c);
 
     xcb_delete_property(g_xcb, g_root, g_ewmh._NET_CLIENT_LIST);
@@ -870,6 +920,7 @@ void focus(Client *client)
     }
 
     focused_client = client;
+    focused_monitor = client->monitor;
     client_set_focused(client, 1);
     xcb_ewmh_set_active_window(&g_ewmh, g_screen_id, client->window);
 
@@ -887,6 +938,7 @@ void focus(Client *client)
             XCB_EVENT_MASK_NO_EVENT,
             (char*)&e);
     hints_set_focused(focused_client);
+    hints_set_monitor(focused_monitor);
     xcb_flush(g_xcb);
 }
 
@@ -938,7 +990,8 @@ void focus_next_monitor()
     if (focused_monitor->next) {
         focused_monitor = focused_monitor->next;
         check_focus_consistency();
-        monitor_render(focused_monitor);
+        hints_set_monitor(focused_monitor);
+        hints_set_focused(focused_client);
         xcb_flush(g_xcb);
     }
 }
@@ -948,15 +1001,30 @@ void focus_previous_monitor()
     if (focused_monitor->prev) {
         focused_monitor = focused_monitor->prev;
         check_focus_consistency();
-        monitor_render(focused_monitor);
+        hints_set_monitor(focused_monitor);
+        hints_set_focused(focused_client);
         xcb_flush(g_xcb);
+    }
+}
+
+void focus_clicked_monitor(int x, int y)
+{
+    for (Monitor *m = monitor_head; m; m = m->next) {
+        if (x > m->x && x < m->x + m->width && 
+                y > m->y && y < m->y + m->height) {
+            focused_monitor = m;
+            check_focus_consistency();
+            hints_set_monitor(focused_monitor);
+            hints_set_focused(focused_client);
+            return;
+        }
     }
 }
 
 void focused_monitor_increase_main_views()
 {
     if (monitor_increase_main_views(focused_monitor)) {
-        monitor_render(focused_monitor);
+        monitor_render(focused_monitor, GS_UNCHANGED);
         xcb_flush(g_xcb);
     }
 }
@@ -964,7 +1032,7 @@ void focused_monitor_increase_main_views()
 void focused_monitor_decrease_main_views()
 {
     if (monitor_decrease_main_views(focused_monitor)) {
-        monitor_render(focused_monitor);
+        monitor_render(focused_monitor, GS_UNCHANGED);
         xcb_flush(g_xcb);
     }
 }
@@ -973,7 +1041,7 @@ void focused_monitor_set_layout(Layout layout)
 {
     if (focused_monitor->layout != layout) {
         focused_monitor->layout = layout;
-        monitor_render(focused_monitor);
+        monitor_render(focused_monitor, GS_UNCHANGED);
         xcb_flush(g_xcb);
     }
 }
@@ -1000,7 +1068,7 @@ void focused_monitor_rotate_clockwise()
     focused_monitor->head->prev = c;
     focused_monitor->head = c;
 
-    monitor_render(focused_monitor);
+    monitor_render(focused_monitor, GS_UNCHANGED);
     xcb_flush(g_xcb);
 }
 
@@ -1026,7 +1094,7 @@ void focused_monitor_rotate_counter_clockwise()
     focused_monitor->tail->next = c;
     focused_monitor->tail = c;
 
-    monitor_render(focused_monitor);
+    monitor_render(focused_monitor, GS_UNCHANGED);
     xcb_flush(g_xcb);
 }
 
@@ -1035,7 +1103,7 @@ void focused_monitor_set_tag(int tag)
 {
     focused_monitor->tagset = (1L << (tag - 1));
     check_focus_consistency();
-    monitor_render(focused_monitor);
+    monitor_render(focused_monitor, GS_UNCHANGED);
     hints_set_monitor(focused_monitor);
     xcb_flush(g_xcb);
 }
@@ -1049,7 +1117,7 @@ void focused_monitor_toggle_tag(int tag)
         focused_monitor->tagset |= (1L << (tag - 1));
 
     check_focus_consistency();
-    monitor_render(focused_monitor);
+    monitor_render(focused_monitor, GS_UNCHANGED);
     hints_set_monitor(focused_monitor);
     xcb_flush(g_xcb);
 }
@@ -1075,13 +1143,14 @@ void focused_client_toggle_mode()
     focused_client->mode = focused_client->mode == MODE_FLOATING ?
             MODE_TILED : MODE_FLOATING;
 
-    monitor_render(focused_client->monitor);
+    monitor_render(focused_client->monitor, GS_UNCHANGED);
     xcb_flush(g_xcb);
 }
 
 
 #define MOVE_INC 35
 
+/* could be moved to client */
 #define CLIENT_COPY(c1 , c2)\
     (c1)->window = (c2)->window;\
     (c1)->f_x = (c2)->t_x;\
@@ -1111,7 +1180,7 @@ void focused_client_toggle_mode()
     (c1)->tagset = (c2)->tagset;\
 
 /* we swap the content only and keep the list structure */
-static void swap(Client *c1, Client *c2) {
+void swap(Client *c1, Client *c2) {
     Client t;
 
     CLIENT_COPY(&t, c1);
@@ -1214,8 +1283,8 @@ void focused_client_to_next_monitor()
         monitor_attach(nm, c);
         focused_monitor = c->monitor;
         check_focus_consistency();
-        monitor_render(cm);
-        monitor_render(nm);
+        monitor_render(cm, GS_UNCHANGED);
+        monitor_render(nm, GS_UNCHANGED);
         xcb_flush(g_xcb);
     }
 }
@@ -1233,8 +1302,8 @@ void focused_client_to_previous_monitor()
         monitor_attach(pm, c);
         focused_monitor = c->monitor;
         check_focus_consistency();
-        monitor_render(cm);
-        monitor_render(pm);
+        monitor_render(cm, GS_UNCHANGED);
+        monitor_render(pm, GS_UNCHANGED);
         xcb_flush(g_xcb);
     }
 }
@@ -1257,7 +1326,7 @@ void focused_client_increase_width()
     } else {
         if (focused_monitor->split < MAIN_SPLIT_MAX) {
             focused_monitor->split += MAIN_SPLIT_INC;
-            monitor_render(focused_monitor);
+            monitor_render(focused_monitor, GS_UNCHANGED);
             xcb_flush(g_xcb);
         }
     }
@@ -1276,7 +1345,7 @@ void focused_client_decrease_width()
     } else {
         if (focused_monitor->split > MAIN_SPLIT_MIN) {
             focused_monitor->split -= MAIN_SPLIT_INC;
-            monitor_render(focused_monitor);
+            monitor_render(focused_monitor, GS_UNCHANGED);
             xcb_flush(g_xcb);
         }
     }
@@ -1295,7 +1364,7 @@ void focused_client_increase_height()
     } else {
         if (focused_monitor->split < MAIN_SPLIT_MAX) {
             focused_monitor->split += MAIN_SPLIT_INC;
-            monitor_render(focused_monitor);
+            monitor_render(focused_monitor, GS_UNCHANGED);
             xcb_flush(g_xcb);
         }
     }
@@ -1314,7 +1383,7 @@ void focused_client_decrease_height()
     } else {
         if (focused_monitor->split > MAIN_SPLIT_MIN) {
             focused_monitor->split -= MAIN_SPLIT_INC;
-            monitor_render(focused_monitor);
+            monitor_render(focused_monitor, GS_UNCHANGED);
             xcb_flush(g_xcb);
         }
     }
@@ -1338,7 +1407,7 @@ void focused_client_set_tag(int tag)
     focused_client->tagset |= (1L << (tag - 1));
     focused_monitor->tags[tag - 1]++;
 
-    monitor_render(focused_monitor);
+    monitor_render(focused_monitor, GS_UNCHANGED);
     check_focus_consistency();
     hints_set_focused(focused_client);
     hints_set_monitor(focused_monitor);
@@ -1367,7 +1436,7 @@ void focused_client_toggle_tag(int tag)
 
     if (focused_monitor->tags[tag - 1] == 0 ||
             focused_monitor->tagset & (1L << (tag - 1)))
-        monitor_render(focused_monitor);
+        monitor_render(focused_monitor, GS_UNCHANGED);
 
     check_focus_consistency();
     hints_set_focused(focused_client);

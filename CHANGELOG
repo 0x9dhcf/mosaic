@@ -8,6 +8,11 @@
 ### Fixed
 ### Security
 
+## [1.1.0] - 2020-03-14
+
+### Added
+    - Allow tiles rotation. 
+
 ## [1.0.1] - 2020-02-22
 
 ### Fixed
@@ -19,8 +24,8 @@
     - Multihead support.
 
 ### Fixed
-    - Some windows (e.g. firefox dialog) are created wit a size of 1x1,
-      the wm shoul rely on size hints (especially min size) to display
+    - Some windows (e.g. firefox dialog) are created with a size of 1x1,
+      the wm should rely on size hints (especially min size) to display
       properly the window. Apply the size hints at client creation time.
     - Allow the move of sticky windows.
 
