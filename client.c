@@ -81,7 +81,7 @@ void client_initialize(Client *client, xcb_window_t window)
     xcb_change_save_set(g_xcb, XCB_SET_MODE_INSERT, window);
 
     /* manage the geometry of the window */
-    // TODO: xcb calls could be //lized
+    /* TODO: xcb calls could be //lized */
     xcb_get_geometry_reply_t *geometry =
             xcb_get_geometry_reply(
                     g_xcb,
