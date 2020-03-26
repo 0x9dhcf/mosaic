@@ -81,13 +81,13 @@ void on_configure_request(xcb_configure_request_event_t *e)
     if (c) {
         if (c->mode == MODE_FLOATING) {
             if (e->value_mask & XCB_CONFIG_WINDOW_X)
-                c->f_x = e->x;
+                c->t_x = c->f_x = e->x;
             if (e->value_mask & XCB_CONFIG_WINDOW_Y)
-                c->f_y = e->y;
+                c->t_y = c->f_y = e->y;
             if (e->value_mask & XCB_CONFIG_WINDOW_WIDTH)
-                c->f_width = e->width;
+                c->t_width = c->f_width = e->width;
             if (e->value_mask & XCB_CONFIG_WINDOW_HEIGHT)
-                c->f_height = e->height;
+                c->t_height = c->f_height = e->height;
             if (e->value_mask & XCB_CONFIG_WINDOW_BORDER_WIDTH)
                 c->border_width = e->border_width;
 
@@ -98,7 +98,16 @@ void on_configure_request(xcb_configure_request_event_t *e)
                             XCB_CONFIG_WINDOW_HEIGHT)))
                 notify(c);
 
-            if (IS_VISIBLE(c))
+            if (IS_VISIBLE(c)) {
+                int x = c->f_x;
+                int y = c->f_y;
+                int w = c->f_width;
+                int h = c->f_height;
+
+                if (IS_CLIENT_STATE(c, STATE_STICKY)) {
+                    x = c->monitor->x + c->t_x;
+                    y = c->monitor->y + c->t_y;
+                }
                 xcb_configure_window(
                         g_xcb,
                         c->window,
@@ -107,12 +116,8 @@ void on_configure_request(xcb_configure_request_event_t *e)
                         XCB_CONFIG_WINDOW_WIDTH |
                         XCB_CONFIG_WINDOW_HEIGHT |
                         XCB_CONFIG_WINDOW_BORDER_WIDTH,
-                        (const int []) {
-                            c->f_x,
-                            c->f_y,
-                            c->f_width,
-                            c->f_height,
-                            c->border_width });
+                        (const int []) {x, y, w, h, c->border_width });
+            }
         } else {
             /* Resend as notify */
             notify(c);
@@ -197,7 +202,7 @@ void on_property_notify(xcb_property_notify_event_t *e)
             refresh = 1;
 
     if (refresh) {
-        monitor_render(client->monitor);
+        monitor_render(client->monitor, GS_UNCHANGED);
         xcb_flush(g_xcb);
     }
 }
@@ -387,15 +392,17 @@ void on_client_message(xcb_client_message_event_t *e)
     }
 
     if (refresh)
-        monitor_render(c->monitor);
+        monitor_render(c->monitor, GS_UNCHANGED);
 
     xcb_flush(g_xcb);
 }
 
 void on_button_press(xcb_button_press_event_t *e)
 {
-    /*if(e->event == g_root)
-        return;*/
+    if(e->event == g_root) {
+        focus_clicked_monitor(e->root_x, e->root_y);
+        return;
+    }
 
     Client *c = lookup(e->event);
 
