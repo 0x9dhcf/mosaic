@@ -53,15 +53,15 @@ void notify(Client *c)
     event.window = c->window;
     event.response_type = XCB_CONFIGURE_NOTIFY;
     if (c->mode == MODE_TILED) {
-        event.x = c->t_x;
-        event.y = c->t_y;
-        event.width = c->t_width;
-        event.height = c->t_height;
+        event.x = c->tiling_geometry.x;
+        event.y = c->tiling_geometry.y;
+        event.width = c->tiling_geometry.width;
+        event.height = c->tiling_geometry.height;
     } else {
-        event.x = c->f_x;
-        event.y = c->f_y;
-        event.width = c->f_width;
-        event.height = c->f_height;
+        event.x = c->floating_geometry.x;
+        event.y = c->floating_geometry.y;
+        event.width = c->floating_geometry.width;
+        event.height = c->floating_geometry.height;
     }
     event.border_width = c->border_width;
     event.above_sibling = XCB_NONE;
@@ -81,13 +81,13 @@ void on_configure_request(xcb_configure_request_event_t *e)
     if (c) {
         if (c->mode == MODE_FLOATING) {
             if (e->value_mask & XCB_CONFIG_WINDOW_X)
-                c->t_x = c->f_x = e->x;
+                c->tiling_geometry.x = c->floating_geometry.x = e->x;
             if (e->value_mask & XCB_CONFIG_WINDOW_Y)
-                c->t_y = c->f_y = e->y;
+                c->tiling_geometry.y = c->floating_geometry.y = e->y;
             if (e->value_mask & XCB_CONFIG_WINDOW_WIDTH)
-                c->t_width = c->f_width = e->width;
+                c->tiling_geometry.width = c->floating_geometry.width = e->width;
             if (e->value_mask & XCB_CONFIG_WINDOW_HEIGHT)
-                c->t_height = c->f_height = e->height;
+                c->tiling_geometry.height = c->floating_geometry.height = e->height;
             if (e->value_mask & XCB_CONFIG_WINDOW_BORDER_WIDTH)
                 c->border_width = e->border_width;
 
@@ -99,14 +99,14 @@ void on_configure_request(xcb_configure_request_event_t *e)
                 notify(c);
 
             if (IS_VISIBLE(c)) {
-                int x = c->f_x;
-                int y = c->f_y;
-                int w = c->f_width;
-                int h = c->f_height;
+                int x = c->floating_geometry.x;
+                int y = c->floating_geometry.y;
+                int w = c->floating_geometry.width;
+                int h = c->floating_geometry.height;
 
                 if (IS_CLIENT_STATE(c, STATE_STICKY)) {
-                    x = c->monitor->x + c->t_x;
-                    y = c->monitor->y + c->t_y;
+                    x = c->monitor->geometry.x + c->tiling_geometry.x;
+                    y = c->monitor->geometry.y + c->tiling_geometry.y;
                 }
                 xcb_configure_window(
                         g_xcb,

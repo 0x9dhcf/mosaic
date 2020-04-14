@@ -137,6 +137,7 @@ void focused_monitor_toggle_tag(int tag);
 /* focused client */
 void focused_client_kill();
 void focused_client_toggle_mode();
+/* TODO: replace by move_vertically(int) amd move_horizontally(int) */
 void focused_client_move_up();
 void focused_client_move_down();
 void focused_client_move_left();

@@ -528,17 +528,10 @@ void cleanup_window_manager()
 
 static void update_monitors(Monitor *scanned)
 {
-    for (Monitor *ms = scanned; ms; ms = ms->next) {
-
-        for (Monitor *me = monitor_head; me; me = me->next) {
-            if (strcmp(me->name, ms->name) == 0) {
-                me->x = ms->x;
-                me->y = ms->y;
-                me->width = ms->width;
-                me->height = ms->height;
-            }
-        }
-    }
+    for (Monitor *ms = scanned; ms; ms = ms->next)
+        for (Monitor *me = monitor_head; me; me = me->next)
+            if (strcmp(me->name, ms->name) == 0)
+                me = ms;
 }
 
 static void add_new_monitors(Monitor *scanned)
@@ -560,18 +553,18 @@ static void add_new_monitors(Monitor *scanned)
         /* if not add it */
         INFO("Adding monitor %s: (%d, %d), [%d, %d]",
                 ms->name,
-                ms->x,
-                ms->y,
-                ms->width,
-                ms->height);
+                ms->geometry.x,
+                ms->geometry.y,
+                ms->geometry.width,
+                ms->geometry.height);
         Monitor *m = malloc(sizeof(Monitor));
         monitor_initialize(
                 m,
                 ms->name,
-                ms->x,
-                ms->y,
-                ms->width,
-                ms->height);
+                ms->geometry.x,
+                ms->geometry.y,
+                ms->geometry.width,
+                ms->geometry.height);
 
         add_monitor(m);
     }
@@ -599,10 +592,10 @@ static void del_old_monitors(Monitor *scanned)
         /* if not remove it */
         INFO("Removing monitor %s: (%d, %d), [%d, %d]",
                 m->name,
-                m->x,
-                m->y,
-                m->width,
-                m->height);
+                m->geometry.x,
+                m->geometry.y,
+                m->geometry.width,
+                m->geometry.height);
 
         Client *c, *d;
         c = m->head;
@@ -790,16 +783,16 @@ void dump()
     for (Monitor *m = monitor_head; m; m = m->next) {
         fprintf(f, "Monitor %s: (%d, %d) [%d, %d]\n",
                 m->name,
-                m->x, m->y,
-                m->width, m->height);
+                m->geometry.x, m->geometry.y,
+                m->geometry.width, m->geometry.height);
         for (Client *c = m->head; c; c = c->next) {
             fprintf(f, "\t %p: %s, %d\n", c, (char*[]) {"tiled", "floating"}[c->mode - 1], c->state);
             fprintf(f, "\t\ttiled: (%d, %d) [%d, %d]\n",
-                    c->t_x, c->t_y,
-                    c->t_width, c->t_height);
+                    c->tiling_geometry.x, c->tiling_geometry.y,
+                    c->tiling_geometry.width, c->tiling_geometry.height);
             fprintf(f, "\t\tfloating: (%d, %d) [%d, %d]\n",
-                    c->f_x, c->f_y,
-                    c->f_width, c->f_height);
+                    c->floating_geometry.x, c->floating_geometry.y,
+                    c->floating_geometry.width, c->floating_geometry.height);
         }
     }
     fclose(f);
@@ -1010,8 +1003,8 @@ void focus_previous_monitor()
 void focus_clicked_monitor(int x, int y)
 {
     for (Monitor *m = monitor_head; m; m = m->next) {
-        if (x > m->x && x < m->x + m->width && 
-                y > m->y && y < m->y + m->height) {
+        if (x > m->geometry.x && x < m->geometry.x + m->geometry.width && 
+                y > m->geometry.y && y < m->geometry.y + m->geometry.height) {
             focused_monitor = m;
             check_focus_consistency();
             hints_set_monitor(focused_monitor);
@@ -1147,45 +1140,26 @@ void focused_client_toggle_mode()
     xcb_flush(g_xcb);
 }
 
-
-#define MOVE_INC 35
-
-/* could be moved to client */
-#define CLIENT_COPY(c1 , c2)\
-    (c1)->window = (c2)->window;\
-    (c1)->f_x = (c2)->t_x;\
-    (c1)->f_y = (c2)->t_y;\
-    (c1)->f_width = (c2)->t_width;\
-    (c1)->f_height = (c2)->t_height;\
-    (c1)->border_width = (c2)->border_width;\
-    (c1)->border_color = (c2)->border_color;\
-    (c1)->mode = (c2)->mode;\
-    (c1)->state = (c2)->state;\
-    (c1)->reserved_top = (c2)->reserved_top;\
-    (c1)->reserved_bottom = (c2)->reserved_bottom;\
-    (c1)->reserved_left = (c2)->reserved_left;\
-    (c1)->reserved_right = (c2)->reserved_right;\
-    (c1)->base_width = (c2)->base_width;\
-    (c1)->base_height = (c2)->base_height;\
-    (c1)->width_increment = (c2)->width_increment;\
-    (c1)->height_increment = (c2)->height_increment;\
-    (c1)->min_width = (c2)->min_width;\
-    (c1)->min_height = (c2)->min_height;\
-    (c1)->max_width = (c2)->max_width;\
-    (c1)->max_height = (c2)->max_height;\
-    (c1)->min_aspect_ratio = (c2)->min_aspect_ratio;\
-    (c1)->max_aspect_ratio = (c2)->max_aspect_ratio;\
-    (c1)->transient = (c2)->transient;\
-    (c1)->monitor = (c2)->monitor;\
-    (c1)->tagset = (c2)->tagset;\
-
 /* we swap the content only and keep the list structure */
 void swap(Client *c1, Client *c2) {
     Client t;
 
-    CLIENT_COPY(&t, c1);
-    CLIENT_COPY(c1, c2);
-    CLIENT_COPY(c2, &t);
+#define CLIENT_COPY_CONTENT(c1 , c2)\
+    (c2)->window = (c1)->window;\
+    (c2)->mode = (c1)->mode;\
+    (c2)->border_width = (c1)->border_width;\
+    (c2)->border_color = (c1)->border_color;\
+    (c2)->state = (c1)->state;\
+    (c2)->strut = (c1)->strut;\
+    (c2)->size_hints = (c1)->size_hints;\
+    (c2)->monitor = (c1)->monitor;\
+    (c2)->tagset = (c1)->tagset;
+
+    CLIENT_COPY_CONTENT(c1, &t);
+    CLIENT_COPY_CONTENT(c2, c1);
+    CLIENT_COPY_CONTENT(&t, c2);
+
+#undef CLIENT_COPY_CONTENT
 
     client_show(c1);
     client_show(c2);
@@ -1193,6 +1167,8 @@ void swap(Client *c1, Client *c2) {
     /* swap the focus */
     focused_client = c1 == focused_client ? c2 : c1;
 }
+
+#define MOVE_INC 35
 
 void focused_client_move_up()
 {
@@ -1202,7 +1178,7 @@ void focused_client_move_up()
         return;
 
     if (focused_client->mode == MODE_FLOATING) {
-        focused_client->f_y -= MOVE_INC;
+        focused_client->floating_geometry.y -= MOVE_INC;
         client_show(focused_client);
     } else {
         Client *c = client_previous(focused_client, MODE_TILED, STATE_ANY);
@@ -1221,7 +1197,7 @@ void focused_client_move_down()
         return;
 
     if (focused_client->mode == MODE_FLOATING) {
-        focused_client->f_y += MOVE_INC;
+        focused_client->floating_geometry.y += MOVE_INC;
         client_show(focused_client);
     } else {
         Client *c = client_next(focused_client, MODE_TILED, STATE_ANY);
@@ -1240,7 +1216,7 @@ void focused_client_move_left()
         return;
 
     if (focused_client->mode == MODE_FLOATING) {
-        focused_client->f_x -= MOVE_INC;
+        focused_client->floating_geometry.x -= MOVE_INC;
         client_show(focused_client);
     } else {
         Client *c = client_previous(focused_client, MODE_TILED, STATE_ANY);
@@ -1259,7 +1235,7 @@ void focused_client_move_right()
         return;
 
     if (focused_client->mode == MODE_FLOATING) {
-        focused_client->f_x += MOVE_INC;
+        focused_client->floating_geometry.x += MOVE_INC;
         client_show(focused_client);
     } else {
         Client *c = client_next(focused_client, MODE_TILED, STATE_ANY);
@@ -1311,7 +1287,7 @@ void focused_client_to_previous_monitor()
 #define MAIN_SPLIT_MIN .2
 #define MAIN_SPLIT_MAX .8
 #define MAIN_SPLIT_INC .05
-#define SIZE_INC 10
+#define SIZE_INC 30
 
 void focused_client_increase_width()
 {
@@ -1319,7 +1295,7 @@ void focused_client_increase_width()
         return;
 
     if (focused_client->mode == MODE_FLOATING) {
-        focused_client->f_width += SIZE_INC;
+        focused_client->floating_geometry.width += SIZE_INC;
         client_apply_size_hints(focused_client); /* TODO: return if no change */
         client_show(focused_client);
         xcb_flush(g_xcb);
@@ -1338,7 +1314,7 @@ void focused_client_decrease_width()
         return;
 
     if (focused_client->mode == MODE_FLOATING) {
-        focused_client->f_width -= SIZE_INC;
+        focused_client->floating_geometry.width -= SIZE_INC;
         client_apply_size_hints(focused_client); /* TODO: return if no change */
         client_show(focused_client);
         xcb_flush(g_xcb);
@@ -1357,7 +1333,7 @@ void focused_client_increase_height()
         return;
 
     if (focused_client->mode == MODE_FLOATING) {
-        focused_client->f_height += SIZE_INC;
+        focused_client->floating_geometry.height += SIZE_INC;
         client_apply_size_hints(focused_client); /* TODO: return if no change */
         client_show(focused_client);
         xcb_flush(g_xcb);
@@ -1376,7 +1352,7 @@ void focused_client_decrease_height()
         return;
 
     if (focused_client->mode == MODE_FLOATING) {
-        focused_client->f_height -= SIZE_INC;
+        focused_client->floating_geometry.height -= SIZE_INC;
         client_apply_size_hints(focused_client); /* TODO: return if no change */
         client_show(focused_client);
         xcb_flush(g_xcb);
