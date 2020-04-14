@@ -27,6 +27,7 @@
 #include "mwm.h"
 #include "log.h"
 #include "monitor.h"
+#include "settings.h"
 
 static int xcb_reply_contains_atom(xcb_get_property_reply_t *reply, xcb_atom_t atom);
 static void center_client(Client *c, Client *on);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Pierre Evenou
+ * Copyright (c) 2019, 2020 Pierre Evenou
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,12 +39,6 @@
 
 #define WMNAME "mwm"
 
-#ifndef NDEBUG
-#define MODKEY XCB_MOD_MASK_1
-#else
-#define MODKEY XCB_MOD_MASK_4
-#endif
-
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
 #define MIN(A, B) ((A) < (B) ? (A) : (B))
 
@@ -58,31 +52,6 @@ enum {
     MWM_ATOM_COUNT
 };
 
-enum  {
-    CB_VOID,
-    CB_INT
-};
-
-typedef struct _Shortcut {
-    struct {
-        unsigned int modifier;
-        xkb_keysym_t keysym;
-    } sequence;
-    int type;
-    union {
-        void (*vcb)();
-        void (*icb)();
-    } callback;
-    union { int i; } arg;
-} Shortcut;
-
-typedef struct _Rule {
-    char *class_name;
-    char *instance_name;
-    int tags;
-    Mode mode;
-} Rule;
-
 /* xcb context */
 xcb_connection_t       *g_xcb;
 int                     g_screen_id;
@@ -92,17 +61,6 @@ xcb_visualtype_t       *g_visual;
 xcb_ewmh_connection_t   g_ewmh;
 xcb_atom_t              g_atoms[MWM_ATOM_COUNT];
 struct xkb_state       *g_xkb_state;
-
-/* static configuration */
-extern unsigned int     g_border_width;
-extern unsigned int     g_normal_color;
-extern unsigned int     g_focused_color;
-extern unsigned int     g_urgent_color;
-extern unsigned int     g_hud_bgcolor;
-extern char             g_hud_font_face[256];
-extern unsigned int     g_hud_font_size;
-extern Rule             g_rules[];
-extern Shortcut         g_shortcuts[]; 
 
 /* globals */
 void quit();
