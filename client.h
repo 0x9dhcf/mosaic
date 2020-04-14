@@ -34,16 +34,16 @@ typedef struct _Monitor Monitor;
 typedef enum _Mode {
     MODE_ANY,
     MODE_TILED,
-    MODE_FLOATING
+    MODE_FLOATING,
+    MODE_FULLSCREEN
 } Mode;
 
 typedef int State;
 
 #define STATE_ANY           0x00
-#define STATE_FOCUSABLE     0x01
+#define STATE_ACCEPT_FOCUS  0x01
 #define STATE_STICKY        0x02
-#define STATE_FULLSCREEN    0x04
-#define STATE_URGENT        0x08
+#define STATE_URGENT        0x04
 
 typedef struct _Strut {
     int top;
@@ -68,6 +68,7 @@ typedef struct _SizeHints {
 typedef struct _Client {
     xcb_window_t    window;
     Mode            mode;
+    Mode            saved_mode;
     Rectangle       tiling_geometry;
     Rectangle       floating_geometry;
     int             border_width;

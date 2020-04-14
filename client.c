@@ -63,7 +63,7 @@ void client_initialize(Client *client, xcb_window_t window)
     client->border_width = g_border_width;
     client->border_color = g_normal_color;
     client->mode = MODE_TILED;
-    client->state = STATE_FOCUSABLE;
+    client->state = STATE_ACCEPT_FOCUS;
     client->strut = (Strut){0};
     client->size_hints = (SizeHints){0};
     client->transient = 0;
@@ -181,9 +181,9 @@ void client_initialize(Client *client, xcb_window_t window)
 void client_set_focusable(Client *client, int focusable)
 {
     if (focusable)
-        CLIENT_SET_STATE(client, STATE_FOCUSABLE);
+        CLIENT_SET_STATE(client, STATE_ACCEPT_FOCUS);
     else
-        CLIENT_UNSET_STATE(client, STATE_FOCUSABLE);
+        CLIENT_UNSET_STATE(client, STATE_ACCEPT_FOCUS);
 }
 
 void client_set_sticky(Client *client, int sticky)
@@ -202,15 +202,16 @@ void client_set_sticky(Client *client, int sticky)
 
 void client_set_fullscreen(Client *client, int fullscreen)
 {
-    if (fullscreen) {
+    if (fullscreen && client->mode != MODE_FULLSCREEN) {
         client->border_width = 0;
         client->saved_tagset = client->tagset;
         client->tagset = 0; /* visible on all monitor's tags */
-        CLIENT_SET_STATE(client, STATE_FULLSCREEN);
+        client->saved_mode = client->mode;
+        client->mode = MODE_FULLSCREEN;
     } else {
         client->tagset = client->saved_tagset;
         client->border_width = g_border_width;
-        CLIENT_UNSET_STATE(client, STATE_FULLSCREEN);
+        client->mode = client->saved_mode;;
     }
 }
 
@@ -256,27 +257,25 @@ void client_show(Client *client)
 {
     if (IS_VISIBLE(client)) {
         Rectangle geometry;
-        if (IS_CLIENT_STATE(client, STATE_FULLSCREEN)) {
-            geometry = client->monitor->geometry;
-        } else {
-            if (client->mode == MODE_TILED) {
-                geometry = client->tiling_geometry;
-            } else { /* MODE_FLOATING */
-                if (client->transient) {
-                    Client *t = lookup(client->transient);
-                    if (t) /* transient for might be closed yet */
-                        center_client(t, client);
-                }
-                if (IS_CLIENT_STATE(client, STATE_STICKY)) {
-                    client->floating_geometry.x =
-                        client->monitor->geometry.x +
-                        client->tiling_geometry.x;
-                    client->floating_geometry.y =
-                        client->monitor->geometry.y +
-                        client->tiling_geometry.y;
-                }
-                geometry = client->floating_geometry;
+        if (client->mode == MODE_TILED) {
+            geometry = client->tiling_geometry;
+        } else if (client->mode == MODE_FLOATING) { 
+            if (client->transient) {
+                Client *t = lookup(client->transient);
+                if (t) /* transient for might be closed yet */
+                    center_client(t, client);
             }
+            if (IS_CLIENT_STATE(client, STATE_STICKY)) {
+                client->floating_geometry.x =
+                    client->monitor->geometry.x +
+                    client->tiling_geometry.x;
+                client->floating_geometry.y =
+                    client->monitor->geometry.y +
+                    client->tiling_geometry.y;
+            }
+            geometry = client->floating_geometry;
+        } else { /* FULLSCREEN */
+            geometry = client->monitor->geometry;
         }
 
         /*
@@ -315,7 +314,7 @@ void client_show(Client *client)
                     XCB_CONFIG_WINDOW_STACK_MODE,
                     (const int []) { XCB_STACK_MODE_BELOW });
 
-        if (IS_CLIENT_STATE(client, STATE_FULLSCREEN))
+        if (client->mode == MODE_FULLSCREEN)
             xcb_configure_window(
                     g_xcb,
                     client->window,
@@ -328,7 +327,7 @@ void client_show(Client *client)
 
 void client_apply_size_hints(Client *client)
 {
-    if (IS_CLIENT_STATE(client, STATE_FULLSCREEN))
+    if (client->mode == MODE_FULLSCREEN)
         return;
 
     /* handle the size aspect ratio */
