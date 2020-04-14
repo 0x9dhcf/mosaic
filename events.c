@@ -219,7 +219,7 @@ void on_focus_in(xcb_focus_in_event_t *e)
         return;
 
     Client *c = lookup(e->event);
-    if (c && IS_VISIBLE(c) && IS_CLIENT_STATE(c, STATE_FOCUSABLE))
+    if (c && IS_VISIBLE(c) && IS_CLIENT_STATE(c, STATE_ACCEPT_FOCUS))
         focus(c);
 }
 
@@ -242,7 +242,7 @@ void on_enter_notify(xcb_enter_notify_event_t *e)
         return;
 
     Client *c = lookup(e->event);
-    if (c && IS_CLIENT_STATE(c, STATE_FOCUSABLE)) {
+    if (c && IS_CLIENT_STATE(c, STATE_ACCEPT_FOCUS)) {
         xcb_set_input_focus(
                 g_xcb,
                 XCB_INPUT_FOCUS_POINTER_ROOT,
@@ -316,7 +316,7 @@ void on_client_message(xcb_client_message_event_t *e)
         return;
 
     if (e->type == g_ewmh._NET_ACTIVE_WINDOW &&
-            IS_CLIENT_STATE(c, STATE_FOCUSABLE))
+            IS_CLIENT_STATE(c, STATE_ACCEPT_FOCUS))
         xcb_set_input_focus(
                 g_xcb,
                 XCB_INPUT_FOCUS_POINTER_ROOT,
@@ -327,11 +327,11 @@ void on_client_message(xcb_client_message_event_t *e)
 #define STATE(event, atom) (event->data.data32[1] == atom || event->data.data32[2] == atom)
 
         if (STATE(e, g_ewmh._NET_WM_STATE_FULLSCREEN)) {
-            if (IS_CLIENT_STATE_NOT(c, STATE_FULLSCREEN) &&
+            if (c->mode != MODE_FULLSCREEN &&
                     (e->data.data32[0] ==  XCB_EWMH_WM_STATE_ADD ||
                      e->data.data32[0] ==  XCB_EWMH_WM_STATE_TOGGLE))
                 client_set_fullscreen(c, 1);
-            if (IS_CLIENT_STATE(c, STATE_FULLSCREEN)  &&
+            if (c->mode ==  MODE_FULLSCREEN  &&
                     (e->data.data32[0] ==  XCB_EWMH_WM_STATE_REMOVE ||
                      e->data.data32[0] ==  XCB_EWMH_WM_STATE_TOGGLE))
                 client_set_fullscreen(c, 0);
@@ -370,7 +370,7 @@ void on_client_message(xcb_client_message_event_t *e)
         int count = 0;
         xcb_atom_t atoms[2];
 
-        if (IS_CLIENT_STATE(c, STATE_FULLSCREEN))
+        if (c->mode ==  MODE_FULLSCREEN)
             atoms[count++] = g_ewmh._NET_WM_STATE_FULLSCREEN;
         if (IS_CLIENT_STATE(c, STATE_URGENT))
             atoms[count++] = g_ewmh._NET_WM_STATE_DEMANDS_ATTENTION;
@@ -395,7 +395,7 @@ void on_button_press(xcb_button_press_event_t *e)
 
     Client *c = lookup(e->event);
 
-    if (c && IS_CLIENT_STATE(c, STATE_FOCUSABLE)
+    if (c && IS_CLIENT_STATE(c, STATE_ACCEPT_FOCUS)
             && e->detail == XCB_BUTTON_INDEX_1)
         xcb_set_input_focus(
                 g_xcb,

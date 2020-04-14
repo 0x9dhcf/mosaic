@@ -376,16 +376,16 @@ void check_focus_consistency()
     if (focused_client &&
             focused_client->monitor == focused_monitor &&
             IS_VISIBLE(focused_client) &&
-            IS_CLIENT_STATE(focused_client, STATE_FOCUSABLE))
+            IS_CLIENT_STATE(focused_client, STATE_ACCEPT_FOCUS))
         return; /* everything is fine with the focus */
 
     /* focus the first focusable client of the focused monitor */
     Client *f = focused_monitor->head;
 
-    if (f && (! IS_VISIBLE(f) || ! IS_CLIENT_STATE(f, STATE_FOCUSABLE)))
-        f = client_next(f, MODE_ANY, STATE_FOCUSABLE);
+    if (f && (! IS_VISIBLE(f) || ! IS_CLIENT_STATE(f, STATE_ACCEPT_FOCUS)))
+        f = client_next(f, MODE_ANY, STATE_ACCEPT_FOCUS);
 
-    if (! f || (! IS_VISIBLE(f) || ! IS_CLIENT_STATE(f, STATE_FOCUSABLE))) {
+    if (! f || (! IS_VISIBLE(f) || ! IS_CLIENT_STATE(f, STATE_ACCEPT_FOCUS))) {
         focused_client = NULL;
         xcb_set_input_focus(
                 g_xcb,
@@ -725,7 +725,7 @@ void manage(xcb_window_t window)
         hints_set_monitor(focused_monitor);
     }
 
-    if (IS_CLIENT_STATE(c, STATE_FOCUSABLE))
+    if (IS_CLIENT_STATE(c, STATE_ACCEPT_FOCUS))
         xcb_set_input_focus(
                 g_xcb,
                 XCB_INPUT_FOCUS_POINTER_ROOT,
@@ -766,9 +766,9 @@ void forget(xcb_window_t window)
     if (c == focused_client) {
         Client *f = NULL;
         if (c == c->monitor->head)
-            f = client_next(c, MODE_ANY, STATE_FOCUSABLE);
+            f = client_next(c, MODE_ANY, STATE_ACCEPT_FOCUS);
         else
-           f = client_previous(c, MODE_ANY, STATE_FOCUSABLE);
+           f = client_previous(c, MODE_ANY, STATE_ACCEPT_FOCUS);
 
         if (f)
             xcb_set_input_focus(
@@ -850,7 +850,7 @@ void focus_next_client()
     if (! focused_client)
         return;
 
-    Client *c = client_next(focused_client, MODE_ANY, STATE_FOCUSABLE);
+    Client *c = client_next(focused_client, MODE_ANY, STATE_ACCEPT_FOCUS);
     if (c) {
         xcb_set_input_focus(
                 g_xcb,
@@ -868,7 +868,7 @@ void focus_previous_client()
     if (! focused_client)
         return;
 
-    Client *c = client_previous(focused_client, MODE_ANY, STATE_FOCUSABLE);
+    Client *c = client_previous(focused_client, MODE_ANY, STATE_ACCEPT_FOCUS);
     if (c) {
         xcb_set_input_focus(
                 g_xcb,
@@ -1032,7 +1032,7 @@ void focused_client_toggle_mode()
     if (! focused_client)
         return;
 
-    if (IS_CLIENT_STATE(focused_client, STATE_FULLSCREEN) ||
+    if (focused_client->mode ==  MODE_FULLSCREEN ||
             IS_CLIENT_STATE(focused_client, STATE_STICKY))
         return;
 
@@ -1075,9 +1075,7 @@ void swap(Client *c1, Client *c2) {
 
 void focused_client_move_up()
 {
-    if (! focused_client ||
-            (focused_client &&
-                IS_CLIENT_STATE(focused_client, STATE_FULLSCREEN)))
+    if (! focused_client || focused_client->mode  == MODE_FULLSCREEN)
         return;
 
     if (focused_client->mode == MODE_FLOATING) {
@@ -1094,9 +1092,7 @@ void focused_client_move_up()
 
 void focused_client_move_down()
 {
-    if (! focused_client ||
-            (focused_client &&
-                IS_CLIENT_STATE(focused_client, STATE_FULLSCREEN)))
+    if (! focused_client || focused_client->mode  == MODE_FULLSCREEN)
         return;
 
     if (focused_client->mode == MODE_FLOATING) {
@@ -1113,9 +1109,7 @@ void focused_client_move_down()
 
 void focused_client_move_left()
 {
-    if (! focused_client ||
-            (focused_client &&
-                IS_CLIENT_STATE(focused_client, STATE_FULLSCREEN)))
+    if (! focused_client || focused_client->mode  == MODE_FULLSCREEN)
         return;
 
     if (focused_client->mode == MODE_FLOATING) {
@@ -1132,9 +1126,7 @@ void focused_client_move_left()
 
 void focused_client_move_right()
 {
-    if (! focused_client ||
-            (focused_client &&
-                IS_CLIENT_STATE(focused_client, STATE_FULLSCREEN)))
+    if (! focused_client || focused_client->mode  == MODE_FULLSCREEN)
         return;
 
     if (focused_client->mode == MODE_FLOATING) {
@@ -1271,11 +1263,8 @@ void focused_client_decrease_height()
 /* set this tag and this tag only */
 void focused_client_set_tag(int tag)
 {
-    if (! focused_client)
-        return;
-
     /* do not change tagset of fullscreen client */
-    if (IS_CLIENT_STATE(focused_client, STATE_FULLSCREEN))
+    if (! focused_client || focused_client->mode ==  MODE_FULLSCREEN)
         return;
 
     for (int i = 0; i < 32; ++i)
@@ -1297,11 +1286,8 @@ void focused_client_set_tag(int tag)
 /* add or remove this tag */
 void focused_client_toggle_tag(int tag)
 {
-    if (! focused_client)
-        return;
-
     /* do not change tagset of fullscreen client */
-    if (IS_CLIENT_STATE(focused_client, STATE_FULLSCREEN))
+    if (! focused_client || focused_client->mode ==  MODE_FULLSCREEN)
         return;
 
     if (focused_client->tagset & (1L << (tag - 1))) {

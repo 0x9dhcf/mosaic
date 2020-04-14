@@ -334,7 +334,7 @@ void monitor_render(Monitor *monitor, GeometryStatus status)
 
     /* first round to get information about clients. */
     for (Client *c = monitor->head; c; c = c->next) {
-        if (IS_CLIENT_STATE(c, STATE_FULLSCREEN))
+        if (c->mode == MODE_FULLSCREEN)
             fullscreen++;
 
         if (IS_CLIENT_STATE_NOT(c, STATE_STICKY) || ! status)
@@ -395,7 +395,7 @@ void monitor_render(Monitor *monitor, GeometryStatus status)
     /* display clients */
     for (Client *c = monitor->head; c; c = c->next) {
         /* if we have some fullscreen, display only those */
-        if (fullscreen && IS_CLIENT_STATE_NOT(c, STATE_FULLSCREEN))
+        if (fullscreen && (c->mode != MODE_FULLSCREEN))
             continue;
 
         if (IS_CLIENT_STATE_NOT(c, STATE_STICKY) || ! status)
