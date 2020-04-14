@@ -72,12 +72,12 @@ void apply_none_layout(Monitor *m, int w_x, int w_y, int w_w, int w_h)
 {
     Client *c;
     for (c = m->head; c; c = c->next)
-        if (c->mode == MODE_TILED && c->tagset & m->tagset) {
-            c->t_x = w_x;
-            c->t_y = w_y;
-            c->t_width = w_w - 2 * c->border_width;
-            c->t_height = w_h - 2 * c->border_width;
-       }
+        if (c->mode == MODE_TILED && c->tagset & m->tagset)
+            c->tiling_geometry = (Rectangle) {
+                    w_x,
+                    w_y,
+                    w_w - 2 * c->border_width,
+                    w_h - 2 * c->border_width};
 }
 
 void horizontal_layout(
@@ -92,10 +92,11 @@ void horizontal_layout(
     Client *c;
     for (c = m->head; c && tiled < mains; c = c->next) {
         if (c->mode == MODE_TILED && IS_VISIBLE(c)) {
-            c->t_x = main_x;
-            c->t_y = main_y;
-            c->t_width = main_w - 2 * c->border_width;
-            c->t_height = main_h - 2 * c->border_width;
+            c->tiling_geometry = (Rectangle) {
+                    main_x,
+                    main_y,
+                    main_w - 2 * c->border_width,
+                    main_h - 2 * c->border_width};
             main_x += main_w;
             tiled++;
         }
@@ -105,10 +106,11 @@ void horizontal_layout(
     tiled = 0;
     for (; c && tiled < stacked; c = c->next) {
         if (c->mode == MODE_TILED && IS_VISIBLE(c)) {
-            c->t_x = stack_x;
-            c->t_y = stack_y;
-            c->t_width = stack_w - 2 * c->border_width;
-            c->t_height = (stack_h + stack_r) - 2 * c->border_width;
+            c->tiling_geometry = (Rectangle) {
+                    stack_x,
+                    stack_y,
+                    stack_w - 2 * c->border_width,
+                    (stack_h + stack_r) - 2 * c->border_width};
             stack_y += stack_h + stack_r;
             stack_r = 0;
             tiled++;
@@ -178,10 +180,11 @@ void vertical_layout(
     Client *c;
     for (c = m->head; c && tiled < mains; c = c->next) {
         if (c->mode == MODE_TILED && IS_VISIBLE(c)) {
-            c->t_x = main_x;
-            c->t_y = main_y;
-            c->t_width = main_w - 2 * c->border_width;
-            c->t_height = main_h - 2 * c->border_width;
+            c->tiling_geometry = (Rectangle) {
+                    main_x,
+                    main_y,
+                    main_w - 2 * c->border_width,
+                    main_h - 2 * c->border_width};
             main_y += main_h;
             tiled++;
         }
@@ -191,10 +194,11 @@ void vertical_layout(
     tiled = 0;
     for (; c && tiled < stacked; c = c->next) {
         if (c->mode == MODE_TILED && IS_VISIBLE(c)) {
-            c->t_x = stack_x;
-            c->t_y = stack_y;
-            c->t_width = stack_w - 2 * c->border_width;
-            c->t_height = (stack_h + stack_r) - 2 * c->border_width;
+            c->tiling_geometry = (Rectangle) {
+                    stack_x,
+                    stack_y,
+                    stack_w - 2 * c->border_width,
+                    (stack_h + stack_r) - 2 * c->border_width};
             stack_x += stack_w + stack_r;
             stack_r = 0;
             tiled++;
@@ -255,10 +259,7 @@ void apply_top_layout(
 void monitor_initialize(Monitor *monitor, const char *name, int x, int y, int width, int height)
 {
     strncpy(monitor->name, name, 127);
-    monitor->x =  x;
-    monitor->y = y;
-    monitor->width = width;
-    monitor->height = height;
+    monitor->geometry = (Rectangle) { x, y, width, height };
     monitor->layout = DEFAULT_LAYOUT;
     monitor->split = DEFAULT_SPLIT;
     monitor->mains = DEFAULT_MAINS;
@@ -292,8 +293,12 @@ void monitor_attach(Monitor *monitor, Client *client)
 
     /* default policy for floatings other than fixed
      * is to be centered on the monitor */
-    client->f_x = monitor->x + (monitor->width - client->f_width) / 2;
-    client->f_y = monitor->y + (monitor->height - client->f_height) / 2;
+    client->floating_geometry.x =
+        (monitor->geometry.x + monitor->geometry.width / 2) - 
+        client->floating_geometry.width / 2;
+    client->floating_geometry.y =
+        (monitor->geometry.y + monitor->geometry.height / 2) -
+        client->floating_geometry.height / 2;
 }
 
 void monitor_detach(Monitor *monitor, Client *client)
@@ -341,15 +346,15 @@ void monitor_render(Monitor *monitor, GeometryStatus status)
         /* XXX: the client position should be considered
          * especially if there's several client reserving space */
         if (IS_VISIBLE(c)) {
-            rl = MAX(rl, c->reserved_left);
-            rr = MAX(rr, c->reserved_right);
-            rt = MAX(rt, c->reserved_top);
-            rb = MAX(rb, c->reserved_bottom);
+            rl = MAX(rl, c->strut.left);
+            rr = MAX(rr, c->strut.right);
+            rt = MAX(rt, c->strut.top);
+            rb = MAX(rb, c->strut.bottom);
         }
-        wx = monitor->x + rl;
-        wy = monitor->y + rt;
-        ww = monitor->width - (rl + rr);
-        wh = monitor->height - (rt + rb);
+        wx = monitor->geometry.x + rl;
+        wy = monitor->geometry.y + rt;
+        ww = monitor->geometry.width - (rl + rr);
+        wh = monitor->geometry.height - (rt + rb);
     }
 
     int mains = tilables < monitor->mains ? tilables : monitor->mains;

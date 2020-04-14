@@ -25,6 +25,8 @@
 
 #include <xcb/xcb.h>
 
+#include "rectangle.h"
+
 typedef struct _Client Client;
 
 typedef enum _Layout {
@@ -42,10 +44,7 @@ typedef enum _GeometryStatus {
 
 typedef struct _Monitor {
     char                name[128];
-    int                 x;
-    int                 y;
-    int                 width;
-    int                 height;
+    Rectangle           geometry;
     Layout              layout;
     float               split;
     int                 mains;

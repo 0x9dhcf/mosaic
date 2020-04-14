@@ -27,6 +27,8 @@
 #include <xcb/xcb_icccm.h>
 #include <xcb/xcb_ewmh.h>
 
+#include "rectangle.h"
+
 typedef struct _Monitor Monitor;
 
 typedef enum _Mode {
@@ -43,34 +45,36 @@ typedef int State;
 #define STATE_FULLSCREEN    0x04
 #define STATE_URGENT        0x08
 
+typedef struct _Strut {
+    int top;
+    int bottom;
+    int left;
+    int right;
+} Strut;
+
+typedef struct _SizeHints {
+    int     base_width;
+    int     base_height;
+    int     width_increment;
+    int     height_increment;
+    int     min_width;
+    int     min_height;
+    int     max_width;
+    int     max_height;
+    double  min_aspect_ratio;
+    double  max_aspect_ratio;
+} SizeHints;
+
 typedef struct _Client {
     xcb_window_t    window;
-    int             t_x;
-    int             t_y;
-    int             t_width;
-    int             t_height;
-    int             f_x;
-    int             f_y;
-    int             f_width;
-    int             f_height;
+    Mode            mode;
+    Rectangle       tiling_geometry;
+    Rectangle       floating_geometry;
     int             border_width;
     int             border_color;
-    Mode            mode;
     State           state;
-    int             reserved_top;
-    int             reserved_bottom;
-    int             reserved_left;
-    int             reserved_right;
-    int             base_width;
-    int             base_height;
-    int             width_increment;
-    int             height_increment;
-    int             min_width;
-    int             min_height;
-    int             max_width;
-    int             max_height;
-    double          min_aspect_ratio;
-    double          max_aspect_ratio;
+    Strut           strut;
+    SizeHints       size_hints;
     xcb_window_t    transient;
     Monitor         *monitor;
     int             tagset;

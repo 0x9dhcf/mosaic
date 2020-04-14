@@ -24,11 +24,12 @@
 #include <string.h>
 
 #include "client.h"
-#include "log.h"
 #include "mwm.h"
+#include "log.h"
 #include "monitor.h"
 
 static int xcb_reply_contains_atom(xcb_get_property_reply_t *reply, xcb_atom_t atom);
+static void center_client(Client *c, Client *on);
 
 int xcb_reply_contains_atom(xcb_get_property_reply_t *reply, xcb_atom_t atom)
 {
@@ -46,31 +47,24 @@ int xcb_reply_contains_atom(xcb_get_property_reply_t *reply, xcb_atom_t atom)
     return 0;
 }
 
+void center_client(Client *c, Client *on)
+{
+    Rectangle r = on->mode == MODE_TILED ? on->tiling_geometry : on->floating_geometry;
+    c->floating_geometry.x = (r.x + r.width / 2) - c->floating_geometry.width / 2;
+    c->floating_geometry.y = (r.y + r.height / 2) - c->floating_geometry.height / 2;
+}
+
 void client_initialize(Client *client, xcb_window_t window)
 {
     client->window = window;
-    client->t_x = client->f_x = -1;
-    client->t_y = client->f_y = -1;
-    client->t_width = client->f_width = 1;
-    client->t_height = client->f_height = 1;
+    client->tiling_geometry = (Rectangle) {0};
+    client->floating_geometry = (Rectangle) {0};
     client->border_width = g_border_width;
     client->border_color = g_normal_color;
     client->mode = MODE_TILED;
     client->state = STATE_FOCUSABLE;
-    client->reserved_top = 0;
-    client->reserved_bottom = 0;
-    client->reserved_left = 0;
-    client->reserved_right = 0;
-    client->base_width = 0;
-    client->base_height = 0;
-    client->width_increment = 0;
-    client->height_increment = 0;
-    client->min_width = 0;
-    client->min_height = 0;
-    client->max_width = 0;
-    client->max_height = 0;
-    client->min_aspect_ratio = 0;
-    client->max_aspect_ratio = 0;
+    client->strut = (Strut){0};
+    client->size_hints = (SizeHints){0};
     client->transient = 0;
     client->transient = XCB_NONE;
     client->monitor = NULL;
@@ -89,10 +83,16 @@ void client_initialize(Client *client, xcb_window_t window)
                     NULL);
 
     if (geometry) {
-        client->t_x = client->f_x = geometry->x;
-        client->t_y = client->f_y = geometry->y;
-        client->t_width = client->f_width = geometry->width;
-        client->t_height = client->f_height = geometry->height;
+        client->tiling_geometry = (Rectangle) {
+                geometry->x,
+                geometry->y,
+                geometry->width,
+                geometry->height};
+        client->floating_geometry = (Rectangle) {
+                geometry->x,
+                geometry->y,
+                geometry->width,
+                geometry->height};
         free(geometry);
     }
 
@@ -192,10 +192,7 @@ void client_set_sticky(Client *client, int sticky)
         client->mode = MODE_FLOATING;
         /* we use the tiled geometry as absolute geometry
          * (relative to monitors) */
-        client->t_x = client->f_x;
-        client->t_y = client->f_y;
-        client->t_width = client->f_width;
-        client->t_height = client->f_height;
+        client->tiling_geometry = client->floating_geometry;
     } else {
         CLIENT_UNSET_STATE(client, STATE_STICKY);
         /* what should be the state now ??? */
@@ -248,8 +245,8 @@ void client_hide(Client *client)
             client->window,
             XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y,
             (const int []) {
-                    -(client->monitor->width),
-                    -(client->monitor->height) });
+                    -(client->monitor->geometry.width),
+                    -(client->monitor->geometry.height) });
 
     xcb_ungrab_pointer(g_xcb, XCB_CURRENT_TIME);
 }
@@ -257,39 +254,27 @@ void client_hide(Client *client)
 void client_show(Client *client)
 {
     if (IS_VISIBLE(client)) {
-        int x, y, w, h;
+        Rectangle geometry;
         if (IS_CLIENT_STATE(client, STATE_FULLSCREEN)) {
-            x = client->monitor->x;
-            y = client->monitor->y;
-            w = client->monitor->width;
-            h = client->monitor->height;
+            geometry = client->monitor->geometry;
         } else {
             if (client->mode == MODE_TILED) {
-                x = client->t_x;
-                y = client->t_y;
-                w = client->t_width;
-                h = client->t_height;
+                geometry = client->tiling_geometry;
             } else { /* MODE_FLOATING */
                 if (client->transient) {
                     Client *t = lookup(client->transient);
-                    if (t) { /* transient for might be closed yet */
-                        if (t->mode == MODE_TILED) {
-                            client->f_x = (t->t_x + t->t_width / 2) - client->f_width / 2;
-                            client->f_y = (t->t_y + t->t_height / 2) - client->f_height / 2;
-                        } else {
-                            client->f_x = (t->f_x + t->f_width / 2) - client->f_width / 2;
-                            client->f_y = (t->f_y + t->f_height / 2) - client->f_height / 2;
-                        }
-                    }
+                    if (t) /* transient for might be closed yet */
+                        center_client(t, client);
                 }
                 if (IS_CLIENT_STATE(client, STATE_STICKY)) {
-                    client->f_x = client->monitor->x + client->t_x;
-                    client->f_y = client->monitor->y + client->t_y;
+                    client->floating_geometry.x =
+                        client->monitor->geometry.x +
+                        client->tiling_geometry.x;
+                    client->floating_geometry.y =
+                        client->monitor->geometry.y +
+                        client->tiling_geometry.y;
                 }
-                x = client->f_x;
-                y = client->f_y;
-                w = client->f_width;
-                h = client->f_height;
+                geometry = client->floating_geometry;
             }
         }
 
@@ -318,8 +303,8 @@ void client_show(Client *client)
                 XCB_CONFIG_WINDOW_HEIGHT |
                 XCB_CONFIG_WINDOW_BORDER_WIDTH,
                 (const int []) {
-                    x, y,
-                    w, h,
+                    geometry.x, geometry.y,
+                    geometry.width, geometry.height,
                     client->border_width });
 
         if (client->mode == MODE_TILED)
@@ -346,49 +331,67 @@ void client_apply_size_hints(Client *client)
         return;
 
     /* handle the size aspect ratio */
-    double dx = client->f_width - client->base_width;
-    double dy = client->f_height - client->base_height;
+    double dx = client->floating_geometry.width - client->size_hints.base_width;
+    double dy = client->floating_geometry.height - client->size_hints.base_height;
     double ratio = dx / dy;
-    if (client->max_aspect_ratio > 0 && client->min_aspect_ratio > 0 && ratio > 0) {
-        if (ratio < client->min_aspect_ratio) {
-            dy = dx / client->min_aspect_ratio + 0.5;
-            client->f_width  = dx + client->base_width;
-            client->f_height = dy + client->base_height;
-        } else if (ratio > client->max_aspect_ratio) {
-            dx = dy * client->max_aspect_ratio + 0.5;
-            client->f_width  = dx + client->base_width;
-            client->f_height = dy + client->base_height;
+    if (client->size_hints.max_aspect_ratio > 0 &&
+            client->size_hints.min_aspect_ratio > 0 && ratio > 0) {
+        if (ratio < client->size_hints.min_aspect_ratio) {
+            dy = dx / client->size_hints.min_aspect_ratio + 0.5;
+            client->floating_geometry.width  = dx + client->size_hints.base_width;
+            client->floating_geometry.height = dy + client->size_hints.base_height;
+        } else if (ratio > client->size_hints.max_aspect_ratio) {
+            dx = dy * client->size_hints.max_aspect_ratio + 0.5;
+            client->floating_geometry.width  = dx + client->size_hints.base_width;
+            client->floating_geometry.height = dy + client->size_hints.base_height;
         }
     }
 
     /* handle the minimum size */
-    client->f_width = MAX(client->f_width, client->min_width);
-    client->f_height = MAX(client->f_height, client->min_height);
+    client->floating_geometry.width = MAX(
+            client->floating_geometry.width,
+            client->size_hints.min_width);
+    client->floating_geometry.height = MAX(
+            client->floating_geometry.height,
+            client->size_hints.min_height);
 
     /* handle the maximum size */
-    if (client->max_width > 0) {
-        client->f_width = MIN(client->f_width, client->max_width);
+    if (client->size_hints.max_width > 0) {
+        client->floating_geometry.width = MIN(
+                client->floating_geometry.width,
+                client->size_hints.max_width);
     }
-    if (client->max_height > 0) {
-        client->f_height = MIN(client->f_height, client->max_height);
+    if (client->size_hints.max_height > 0) {
+        client->floating_geometry.height = MIN(
+                client->floating_geometry.height,
+                client->size_hints.max_height);
     }
 
     /* handle the size increment */
-    if (client->width_increment > 0 && client->height_increment > 0) {
-        int t1 = client->f_width, t2 = client->f_height;
-        t1 = client->base_width > t1 ? 0 : t1 - client->base_width;
-        t2 = client->base_height > t2 ? 0 : t2 - client->base_height;
-        client->f_width -= t1 % client->width_increment;
-        client->f_height -= t2 % client->height_increment;
+    if (client->size_hints.width_increment > 0 &&
+            client->size_hints.height_increment > 0) {
+        int t1 = client->floating_geometry.width;
+        int t2 = client->floating_geometry.height;
+        if (client->size_hints.base_width > t1)
+            t1 = 0;
+        else
+            t1 -= client->size_hints.base_width;
+
+        if (client->size_hints.base_height > t2)
+            t2 = 0;
+        else
+            t2 -= client->size_hints.base_height;
+
+        client->floating_geometry.width -=
+            t1 % client->size_hints.width_increment;
+        client->floating_geometry.height -=
+            t2 % client->size_hints.height_increment;
     }
 }
 
 int client_update_reserved(Client *client)
 {
-    client->reserved_top = 0;
-    client->reserved_bottom = 0;
-    client->reserved_left = 0;
-    client->reserved_right = 0;
+    client->strut = (Strut){0};
 
     xcb_ewmh_wm_strut_partial_t strut;
     if (xcb_ewmh_get_wm_strut_partial_reply(
@@ -396,10 +399,10 @@ int client_update_reserved(Client *client)
             xcb_ewmh_get_wm_strut_partial(&g_ewmh, client->window),
             &strut,
             NULL) == 1) {
-        client->reserved_top = strut.top;
-        client->reserved_bottom = strut.bottom;
-        client->reserved_left = strut.left;
-        client->reserved_right = strut.right;
+        client->strut.top = strut.top;
+        client->strut.bottom = strut.bottom;
+        client->strut.left = strut.left;
+        client->strut.right = strut.right;
         return 1;
     }
     return 0;
@@ -418,49 +421,49 @@ int client_update_size_hints(Client *client)
         return 0;
     }
 
-    client->base_width = client->base_height = 0;
-    client->width_increment = client->height_increment = 0;
-    client->max_width = client->max_height = 0;
-    client->min_width = client->min_height = 0;
-    client->max_aspect_ratio = client->min_aspect_ratio = 0.0;
+    client->size_hints.base_width = client->size_hints.base_height = 0;
+    client->size_hints.width_increment = client->size_hints.height_increment = 0;
+    client->size_hints.max_width = client->size_hints.max_height = 0;
+    client->size_hints.min_width = client->size_hints.min_height = 0;
+    client->size_hints.max_aspect_ratio = client->size_hints.min_aspect_ratio = 0.0;
 
     xcb_size_hints_t size;
     if (xcb_icccm_get_wm_size_hints_from_reply(&size, normal_hints)) {
 
         /* base size */
         if (size.flags & XCB_ICCCM_SIZE_HINT_BASE_SIZE) {
-            client->base_width = size.base_width;
-            client->base_height = size.base_height;
+            client->size_hints.base_width = size.base_width;
+            client->size_hints.base_height = size.base_height;
         } else {
             /* note: not using min size as fallback */
-            client->base_width = client->base_height = 0;
+            client->size_hints.base_width = client->size_hints.base_height = 0;
         }
 
         /* max size */
         if (size.flags & XCB_ICCCM_SIZE_HINT_P_MAX_SIZE) {
-            client->max_width = MAX(size.max_width, 1);
-            client->max_height = MAX(size.max_height, 1);
+            client->size_hints.max_width = MAX(size.max_width, 1);
+            client->size_hints.max_height = MAX(size.max_height, 1);
         } else {
-            client->max_width = client->max_height = UINT32_MAX;
+            client->size_hints.max_width = client->size_hints.max_height = UINT32_MAX;
         }
 
         /* min size */
         if (size.flags & XCB_ICCCM_SIZE_HINT_P_MIN_SIZE) {
-            client->min_width = size.min_width;
-            client->min_height = size.min_height;
+            client->size_hints.min_width = size.min_width;
+            client->size_hints.min_height = size.min_height;
         } else {
             /* according to ICCCM 4.1.23 base size
              * should be used as a fallback */
-            client->min_width = client->base_width;
-            client->min_height = client->base_height;
+            client->size_hints.min_width = client->size_hints.base_width;
+            client->size_hints.min_height = client->size_hints.base_height;
         }
 
         /* increments */
         if (size.flags & XCB_ICCCM_SIZE_HINT_P_RESIZE_INC) {
-            client->width_increment = size.width_inc;
-            client->height_increment = size.height_inc;
+            client->size_hints.width_increment = size.width_inc;
+            client->size_hints.height_increment = size.height_inc;
         } else {
-            client->width_increment = client->height_increment = 1;
+            client->size_hints.width_increment = client->size_hints.height_increment = 1;
         }
 
         /* aspect */
@@ -479,8 +482,8 @@ int client_update_size_hints(Client *client)
             min_aspect_num = 1;
             min_aspect_den = UINT32_MAX;
         }
-        client->max_aspect_ratio = (double)max_aspect_num / (double)max_aspect_den;
-        client->min_aspect_ratio = (double)min_aspect_num / (double)min_aspect_den;
+        client->size_hints.max_aspect_ratio = (double)max_aspect_num / (double)max_aspect_den;
+        client->size_hints.min_aspect_ratio = (double)min_aspect_num / (double)min_aspect_den;
 
         /* XXX: the client should be "fixed" but definitely not "sticky"
         if (client->max_width && client->max_height &&
