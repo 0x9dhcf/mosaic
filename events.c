@@ -31,6 +31,8 @@
 #include "events.h"
 #include "log.h"
 #include "mwm.h"
+#include "client.h"
+#include "settings.h"
 #include "hints.h"
 
 static void notify(Client *c);
