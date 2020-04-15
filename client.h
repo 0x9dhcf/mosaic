@@ -91,7 +91,6 @@ typedef struct _Client {
 #define IS_VISIBLE(c) ((c->tagset & c->monitor->tagset) || ! c->tagset)
 
 void client_initialize(Client *client, xcb_window_t window);
-void client_set_focusable(Client *client, int focusable);
 void client_set_sticky(Client *client, int sticky);
 void client_set_fullscreen(Client *client, int fullscreen);
 void client_set_urgent(Client *client, int urgency);

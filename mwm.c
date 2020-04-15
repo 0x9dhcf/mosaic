@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Pierre Evenou
+ * Copyright (c) 2019, 2020 Pierre Evenou
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,14 +20,13 @@
  * SOFTWARE.
  */
 
-#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
 #include <locale.h>
+#include <getopt.h>
 #include <signal.h>
 #include <fcntl.h>
-#include <getopt.h>
 #include <sys/select.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -1308,6 +1307,7 @@ void focused_client_toggle_tag(int tag)
     hints_set_monitor(focused_monitor);
     xcb_flush(g_xcb);
 }
+
 
 int main(int argc, char **argv)
 {
