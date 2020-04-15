@@ -178,25 +178,18 @@ void client_initialize(Client *client, xcb_window_t window)
     client_apply_size_hints(client);
 }
 
-void client_set_focusable(Client *client, int focusable)
-{
-    if (focusable)
-        CLIENT_SET_STATE(client, STATE_ACCEPT_FOCUS);
-    else
-        CLIENT_UNSET_STATE(client, STATE_ACCEPT_FOCUS);
-}
-
 void client_set_sticky(Client *client, int sticky)
 {
     if (sticky) {
         CLIENT_SET_STATE(client, STATE_STICKY);
+        client->saved_mode = client->mode;
         client->mode = MODE_FLOATING;
         /* we use the tiled geometry as absolute geometry
          * (relative to monitors) */
         client->tiling_geometry = client->floating_geometry;
     } else {
         CLIENT_UNSET_STATE(client, STATE_STICKY);
-        /* what should be the state now ??? */
+        client->mode = client->saved_mode;
     }
 }
 
@@ -512,14 +505,18 @@ int client_update_wm_hints(Client *client)
         return 0;
     }
 
-    client_set_focusable(client, 1);
+    CLIENT_SET_STATE(client, STATE_ACCEPT_FOCUS);
     client_set_urgent(client, 0);
 
     if (xcb_get_property_value_length(hints) != 0) {
         xcb_icccm_wm_hints_t wm_hints;
         if (xcb_icccm_get_wm_hints_from_reply(&wm_hints, hints)) {
-            if (wm_hints.flags & XCB_ICCCM_WM_HINT_INPUT)
-                client_set_focusable(client, wm_hints.input);
+            if (wm_hints.flags & XCB_ICCCM_WM_HINT_INPUT) {
+                if (wm_hints.input)
+                    CLIENT_SET_STATE(client, STATE_ACCEPT_FOCUS);
+                else
+                    CLIENT_UNSET_STATE(client, STATE_ACCEPT_FOCUS);
+            }
             client_set_urgent(client, xcb_icccm_wm_hints_get_urgency(&wm_hints));
             refresh = 1;
         }
@@ -558,7 +555,7 @@ int client_update_window_type(Client *client)
     }
 
     if (xcb_reply_contains_atom(type, g_ewmh._NET_WM_WINDOW_TYPE_DOCK)) {
-        client_set_focusable(client, 0);
+        CLIENT_UNSET_STATE(client, STATE_ACCEPT_FOCUS);
         client_set_sticky(client, 1);
         client->border_width = 0;
         client->tagset = 0;
