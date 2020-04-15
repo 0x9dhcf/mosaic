@@ -200,7 +200,7 @@ void on_property_notify(xcb_property_notify_event_t *e)
             refresh = 1;
 
     if (e->atom == g_ewmh._NET_WM_STRUT_PARTIAL)
-        if (client_update_reserved(client))
+        if (client_update_strut(client))
             refresh = 1;
 
     if (refresh) {

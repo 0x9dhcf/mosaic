@@ -98,7 +98,7 @@ void client_hide(Client *client);
 void client_show(Client *client);
 void client_apply_size_hints(Client *client);
 void client_set_focused(Client *client, int focus);
-int client_update_reserved(Client *client);
+int client_update_strut(Client *client);
 int client_update_size_hints(Client *client);
 int client_update_wm_hints(Client *client);
 int client_update_window_type(Client *client);
