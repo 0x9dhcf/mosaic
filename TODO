@@ -1,7 +1,5 @@
-# 1.1.x
 - progressive stack
 - keep track of urgent windows (add a MWM atom)
-
-# x.x.x
 - mouse support?
 - enhance ewmh support? (WM_DELETE and WM_STATE at least)
+- set number of main shortcuts
