@@ -403,26 +403,45 @@ void monitor_render(Monitor *monitor, GeometryStatus status)
     }
 }
 
-int monitor_increase_main_views(Monitor *monitor)
+void monitor_update_main_views(Monitor *monitor, int by)
 {
-    int tilables = 0;
-    for (Client *c = monitor->head; c; c = c->next)
-        if (c->mode == MODE_TILED && IS_VISIBLE(c))
+    if (by > 0) {
+        
+        int tilables = 0;
+        for (Client *c = monitor->head; c; c = c->next)
+            if (c->mode == MODE_TILED && IS_VISIBLE(c))
                 tilables++;
 
-    if (tilables > monitor->mains) {
-        monitor->mains++;
-        return 1;
+        if (tilables >= monitor->mains + by)
+            monitor->mains += by;
+        else 
+            monitor->mains = tilables;
+    } else {
+        if (monitor->mains + by > 1)
+            monitor->mains += by;
+        else
+            monitor->mains = 1;
     }
-    return 0;
 }
 
-int monitor_decrease_main_views(Monitor *monitor)
-{
-    if (monitor->mains > 1) {
-        monitor->mains--;
-        return 1;
-    }
-    return 0;
-}
+//void monitor_add_main_views(Monitor *monitor, int nb)
+//{
+//    int tilables = 0;
+//    for (Client *c = monitor->head; c; c = c->next)
+//        if (c->mode == MODE_TILED && IS_VISIBLE(c))
+//                tilables++;
+//
+//    if (tilables >= monitor->mains + nb)
+//        monitor->mains += nb;
+//    else 
+//        monitor->mains = tilables;
+//}
+//
+//void monitor_remove_main_views(Monitor *monitor, int nb)
+//{
+//    if (monitor->mains - nb > 1)
+//        monitor->mains -= nb;
+//    else
+//        monitor->mains = 1;
+//}
 

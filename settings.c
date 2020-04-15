@@ -23,7 +23,7 @@
 #include "settings.h"
 #include "mwm.h"
 
-#define AUTOSTART ".mwmrc"
+#define SIZE_INC    30
 
 #define K_M         MODKEY
 #define K_MC        MODKEY | XCB_MOD_MASK_CONTROL
@@ -50,8 +50,8 @@ Shortcut g_shortcuts[] = {
     {{K_M,      XKB_KEY_comma},     CB_VOID,    {focus_previous_monitor},               {}},
 
     /* monitors */
-    {{K_MC,     XKB_KEY_Page_Up},   CB_VOID,    {focused_monitor_increase_main_views},  {}},
-    {{K_MC,     XKB_KEY_Page_Down}, CB_VOID,    {focused_monitor_decrease_main_views},  {}},
+    {{K_MC,     XKB_KEY_Page_Up},   CB_INT,     {focused_monitor_update_main_views},    {1}},
+    {{K_MC,     XKB_KEY_Page_Down}, CB_INT,     {focused_monitor_update_main_views},    {-1}},
     {{K_MC,     XKB_KEY_space},     CB_INT,     {focused_monitor_set_layout},           {LT_NONE}},
     {{K_MC,     XKB_KEY_Right},     CB_INT,     {focused_monitor_set_layout},           {LT_RIGHT}},
     {{K_MC,     XKB_KEY_Left},      CB_INT,     {focused_monitor_set_layout},           {LT_LEFT}},
@@ -81,16 +81,16 @@ Shortcut g_shortcuts[] = {
     /* focused client */
     {{K_MS,     XKB_KEY_q},         CB_VOID,    {focused_client_kill},                  {}},
     {{K_MCS,    XKB_KEY_space},     CB_VOID,    {focused_client_toggle_mode},           {}},
-    {{K_MS,     XKB_KEY_Up},        CB_VOID,    {focused_client_move_up},               {}},
-    {{K_MS,     XKB_KEY_Down},      CB_VOID,    {focused_client_move_down},             {}},
-    {{K_MS,     XKB_KEY_Left},      CB_VOID,    {focused_client_move_left},             {}},
-    {{K_MS,     XKB_KEY_Right},     CB_VOID,    {focused_client_move_right},            {}},
+    {{K_MS,     XKB_KEY_Up},        CB_INT,     {focused_client_move},                  {D_UP}},
+    {{K_MS,     XKB_KEY_Down},      CB_INT,     {focused_client_move},                  {D_DOWN}},
+    {{K_MS,     XKB_KEY_Left},      CB_INT,     {focused_client_move},                  {D_LEFT}},
+    {{K_MS,     XKB_KEY_Right},     CB_INT,     {focused_client_move},                  {D_RIGHT}},
     {{K_MS,     XKB_KEY_period},    CB_VOID,    {focused_client_to_next_monitor},       {}},
     {{K_MS,     XKB_KEY_comma },    CB_VOID,    {focused_client_to_previous_monitor},   {}},
-    {{K_MCS,    XKB_KEY_Up},        CB_VOID,    {focused_client_decrease_height},       {}},
-    {{K_MCS,    XKB_KEY_Down},      CB_VOID,    {focused_client_increase_height},       {}},
-    {{K_MCS,    XKB_KEY_Left},      CB_VOID,    {focused_client_decrease_width},        {}},
-    {{K_MCS,    XKB_KEY_Right},     CB_VOID,    {focused_client_increase_width},        {}},
+    {{K_MCS,    XKB_KEY_Up},        CB_INT_INT, {focused_client_resize},                {0, -30}},
+    {{K_MCS,    XKB_KEY_Down},      CB_INT_INT, {focused_client_resize},                {0, 30}},
+    {{K_MCS,    XKB_KEY_Left},      CB_INT_INT, {focused_client_resize},                {-30, 0}},
+    {{K_MCS,    XKB_KEY_Right},     CB_INT_INT, {focused_client_resize},                {30, 0}},
     {{K_MS,     XKB_KEY_1},         CB_INT,     {focused_client_set_tag},               {1}},
     {{K_MS,     XKB_KEY_2},         CB_INT,     {focused_client_set_tag},               {2}},
     {{K_MS,     XKB_KEY_3},         CB_INT,     {focused_client_set_tag},               {3}},

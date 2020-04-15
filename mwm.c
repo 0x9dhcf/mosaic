@@ -905,7 +905,7 @@ void focus_previous_monitor()
 void focus_clicked_monitor(int x, int y)
 {
     for (Monitor *m = monitor_head; m; m = m->next) {
-        if (x > m->geometry.x && x < m->geometry.x + m->geometry.width && 
+        if (x > m->geometry.x && x < m->geometry.x + m->geometry.width &&
                 y > m->geometry.y && y < m->geometry.y + m->geometry.height) {
             focused_monitor = m;
             check_focus_consistency();
@@ -916,20 +916,12 @@ void focus_clicked_monitor(int x, int y)
     }
 }
 
-void focused_monitor_increase_main_views()
-{
-    if (monitor_increase_main_views(focused_monitor)) {
-        monitor_render(focused_monitor, GS_UNCHANGED);
-        xcb_flush(g_xcb);
-    }
-}
 
-void focused_monitor_decrease_main_views()
+void focused_monitor_update_main_views(int by)
 {
-    if (monitor_decrease_main_views(focused_monitor)) {
-        monitor_render(focused_monitor, GS_UNCHANGED);
-        xcb_flush(g_xcb);
-    }
+    monitor_update_main_views(focused_monitor, by);
+    monitor_render(focused_monitor, GS_UNCHANGED);
+    xcb_flush(g_xcb);
 }
 
 void focused_monitor_set_layout(Layout layout)
@@ -1072,67 +1064,39 @@ void swap(Client *c1, Client *c2) {
 
 #define MOVE_INC 35
 
-void focused_client_move_up()
+void focused_client_move(Direction direction)
 {
     if (! focused_client || focused_client->mode  == MODE_FULLSCREEN)
         return;
 
     if (focused_client->mode == MODE_FLOATING) {
-        focused_client->floating_geometry.y -= MOVE_INC;
+        switch (direction) {
+            case D_UP:
+                focused_client->floating_geometry.y -= MOVE_INC;
+                break;
+            case D_DOWN:
+                focused_client->floating_geometry.y += MOVE_INC;
+                break;
+            case D_LEFT:
+                focused_client->floating_geometry.x -= MOVE_INC;
+                break;
+            case D_RIGHT:
+                focused_client->floating_geometry.x += MOVE_INC;
+                break;
+        }
         client_show(focused_client);
     } else {
-        Client *c = client_previous(focused_client, MODE_TILED, STATE_ANY);
-        if (c)
-            swap(focused_client, c);
-    }
-
-    xcb_flush(g_xcb);
-}
-
-void focused_client_move_down()
-{
-    if (! focused_client || focused_client->mode  == MODE_FULLSCREEN)
-        return;
-
-    if (focused_client->mode == MODE_FLOATING) {
-        focused_client->floating_geometry.y += MOVE_INC;
-        client_show(focused_client);
-    } else {
-        Client *c = client_next(focused_client, MODE_TILED, STATE_ANY);
-        if (c)
-            swap(focused_client, c);
-    }
-
-    xcb_flush(g_xcb);
-}
-
-void focused_client_move_left()
-{
-    if (! focused_client || focused_client->mode  == MODE_FULLSCREEN)
-        return;
-
-    if (focused_client->mode == MODE_FLOATING) {
-        focused_client->floating_geometry.x -= MOVE_INC;
-        client_show(focused_client);
-    } else {
-        Client *c = client_previous(focused_client, MODE_TILED, STATE_ANY);
-        if (c)
-            swap(focused_client, c);
-    }
-
-    xcb_flush(g_xcb);
-}
-
-void focused_client_move_right()
-{
-    if (! focused_client || focused_client->mode  == MODE_FULLSCREEN)
-        return;
-
-    if (focused_client->mode == MODE_FLOATING) {
-        focused_client->floating_geometry.x += MOVE_INC;
-        client_show(focused_client);
-    } else {
-        Client *c = client_next(focused_client, MODE_TILED, STATE_ANY);
+        Client *c = NULL;
+        switch (direction) {
+            case D_UP:
+            case D_LEFT:
+                c = client_previous(focused_client, MODE_TILED, STATE_ANY);
+                break;
+            case D_DOWN:
+            case D_RIGHT:
+                c = client_next(focused_client, MODE_TILED, STATE_ANY);
+                break;
+        }
         if (c)
             swap(focused_client, c);
     }
@@ -1181,78 +1145,27 @@ void focused_client_to_previous_monitor()
 #define MAIN_SPLIT_MIN .2
 #define MAIN_SPLIT_MAX .8
 #define MAIN_SPLIT_INC .05
-#define SIZE_INC 30
 
-void focused_client_increase_width()
+void focused_client_resize(int width, int height)
 {
+    DEBUG("resize: %d, %d", width, height);
     if (! focused_client)
         return;
 
     if (focused_client->mode == MODE_FLOATING) {
-        focused_client->floating_geometry.width += SIZE_INC;
-        client_apply_size_hints(focused_client); /* TODO: return if no change */
+        focused_client->floating_geometry.width += width;
+        focused_client->floating_geometry.height += height;
+        client_apply_size_hints(focused_client);
         client_show(focused_client);
         xcb_flush(g_xcb);
     } else {
-        if (focused_monitor->split < MAIN_SPLIT_MAX) {
-            focused_monitor->split += MAIN_SPLIT_INC;
-            monitor_render(focused_monitor, GS_UNCHANGED);
-            xcb_flush(g_xcb);
-        }
-    }
-}
-
-void focused_client_decrease_width()
-{
-    if (! focused_client)
-        return;
-
-    if (focused_client->mode == MODE_FLOATING) {
-        focused_client->floating_geometry.width -= SIZE_INC;
-        client_apply_size_hints(focused_client); /* TODO: return if no change */
-        client_show(focused_client);
-        xcb_flush(g_xcb);
-    } else {
-        if (focused_monitor->split > MAIN_SPLIT_MIN) {
+        if ((width < 0 || height < 0) && focused_monitor->split > MAIN_SPLIT_MIN) {
             focused_monitor->split -= MAIN_SPLIT_INC;
             monitor_render(focused_monitor, GS_UNCHANGED);
             xcb_flush(g_xcb);
         }
-    }
-}
-
-void focused_client_increase_height()
-{
-    if (! focused_client)
-        return;
-
-    if (focused_client->mode == MODE_FLOATING) {
-        focused_client->floating_geometry.height += SIZE_INC;
-        client_apply_size_hints(focused_client); /* TODO: return if no change */
-        client_show(focused_client);
-        xcb_flush(g_xcb);
-    } else {
-        if (focused_monitor->split < MAIN_SPLIT_MAX) {
+        if ((width > 0 || height > 0) && focused_monitor->split < MAIN_SPLIT_MAX) {
             focused_monitor->split += MAIN_SPLIT_INC;
-            monitor_render(focused_monitor, GS_UNCHANGED);
-            xcb_flush(g_xcb);
-        }
-    }
-}
-
-void focused_client_decrease_height()
-{
-    if (! focused_client)
-        return;
-
-    if (focused_client->mode == MODE_FLOATING) {
-        focused_client->floating_geometry.height -= SIZE_INC;
-        client_apply_size_hints(focused_client); /* TODO: return if no change */
-        client_show(focused_client);
-        xcb_flush(g_xcb);
-    } else {
-        if (focused_monitor->split > MAIN_SPLIT_MIN) {
-            focused_monitor->split -= MAIN_SPLIT_INC;
             monitor_render(focused_monitor, GS_UNCHANGED);
             xcb_flush(g_xcb);
         }

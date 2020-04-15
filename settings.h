@@ -40,7 +40,8 @@
 
 typedef enum  _CallbackType {
     CB_VOID,
-    CB_INT
+    CB_INT,
+    CB_INT_INT
 } CallbackType ;
 
 typedef struct _Shortcut {
@@ -51,9 +52,10 @@ typedef struct _Shortcut {
     CallbackType type;
     union {
         void (*vcb)();
-        void (*icb)();
+        void (*icb)(int);
+        void (*iicb)(int, int);
     } callback;
-    union { int i; } arg;
+    int args[2];
 } Shortcut;
 
 typedef struct _Rule {

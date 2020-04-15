@@ -60,7 +60,8 @@ void monitor_initialize(Monitor *monitor, const char *name, int x, int y, int wi
 void monitor_attach(Monitor *monitor, Client *client);
 void monitor_detach(Monitor *monitor, Client *client);
 void monitor_render(Monitor *monitor, GeometryStatus status);
-int monitor_increase_main_views(Monitor *monitor);
-int monitor_decrease_main_views(Monitor *monitor);
+//void monitor_add_main_views(Monitor *monitor, int nb);
+//void monitor_remove_main_views(Monitor *monitor, int nb);
+void monitor_update_main_views(Monitor *monitor, int by);
 
 #endif

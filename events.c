@@ -437,7 +437,12 @@ void on_key_press(xcb_key_press_event_t *e)
                     g_shortcuts[i].callback.vcb();
                     break;
                 case CB_INT:
-                    g_shortcuts[i].callback.icb(g_shortcuts[i].arg.i);
+                    g_shortcuts[i].callback.icb(g_shortcuts[i].args[0]);
+                    break;
+                case CB_INT_INT:
+                    g_shortcuts[i].callback.iicb(
+                            g_shortcuts[i].args[0],
+                            g_shortcuts[i].args[1]);
                     break;
             }
         }

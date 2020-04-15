@@ -52,6 +52,13 @@ enum {
     MWM_ATOM_COUNT
 };
 
+typedef enum _Direction {
+    D_UP,
+    D_DOWN,
+    D_LEFT,
+    D_RIGHT
+} Direction;
+
 /* xcb context */
 xcb_connection_t       *g_xcb;
 int                     g_screen_id;
@@ -83,9 +90,8 @@ void focus_next_monitor();
 void focus_previous_monitor();
 void focus_clicked_monitor(int x, int y);
 
-/* focused monitor */
-void focused_monitor_increase_main_views();
-void focused_monitor_decrease_main_views();
+/* focused monitor */ 
+void focused_monitor_update_main_views(int by);
 void focused_monitor_set_layout(Layout layout);
 void focused_monitor_rotate_clockwise();
 void focused_monitor_rotate_counter_clockwise();
@@ -95,17 +101,10 @@ void focused_monitor_toggle_tag(int tag);
 /* focused client */
 void focused_client_kill();
 void focused_client_toggle_mode();
-/* TODO: replace by move_vertically(int) amd move_horizontally(int) */
-void focused_client_move_up();
-void focused_client_move_down();
-void focused_client_move_left();
-void focused_client_move_right();
+void focused_client_move(Direction direction);
 void focused_client_to_next_monitor();
 void focused_client_to_previous_monitor();
-void focused_client_increase_width();
-void focused_client_decrease_width();
-void focused_client_increase_height();
-void focused_client_decrease_height();
+void focused_client_resize(int width, int height);
 void focused_client_set_tag(int tag);
 void focused_client_toggle_tag(int tag);
 
