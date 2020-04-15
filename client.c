@@ -169,7 +169,7 @@ void client_initialize(Client *client, xcb_window_t window)
     }
 
     /* what the client tells us about itself */
-    client_update_reserved(client);
+    client_update_strut(client);
     client_update_size_hints(client);
     client_update_wm_hints(client);
     client_update_window_type(client);
@@ -382,7 +382,7 @@ void client_apply_size_hints(Client *client)
     }
 }
 
-int client_update_reserved(Client *client)
+int client_update_strut(Client *client)
 {
     client->strut = (Strut){0};
 
