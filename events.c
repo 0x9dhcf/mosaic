@@ -34,8 +34,10 @@
 #include "client.h"
 #include "settings.h"
 #include "hints.h"
+#include "bar.h"
 
 static void notify(Client *c);
+static void on_expose(xcb_expose_event_t *e);
 static void on_configure_request(xcb_configure_request_event_t *e);
 static void on_configure_notify(xcb_configure_notify_event_t *e);
 static void on_map_request(xcb_map_request_event_t *e);
@@ -136,6 +138,12 @@ void on_configure_request(xcb_configure_request_event_t *e)
                 (int[]) { e->x, e->y, e->width, e->height, e->border_width });
     }
     xcb_aux_sync(g_xcb);
+}
+
+void on_expose(xcb_expose_event_t *e)
+{
+    if (e->window == g_bar.window)
+        refresh_bar();
 }
 
 void on_configure_notify(xcb_configure_notify_event_t *e)
@@ -393,6 +401,22 @@ void on_button_press(xcb_button_press_event_t *e)
         return;
     }
 
+    if (e->event == g_bar.window) {
+        if (fork() == 0) {
+            int pid = fork();
+            if (pid == 0) {
+                if (g_xcb)
+                    close(xcb_get_file_descriptor(g_xcb));
+                setsid();
+                //execvp("xterm", {"-e ls"});
+                system("xterm");
+                exit(EXIT_SUCCESS);
+            }
+            if (pid > 0)
+                exit(EXIT_SUCCESS);
+        }
+    }
+
     Client *c = lookup(e->event);
 
     if (c && IS_CLIENT_STATE(c, STATE_ACCEPT_FOCUS)
@@ -453,6 +477,9 @@ void on_key_press(xcb_key_press_event_t *e)
 void on_event(xcb_generic_event_t *event)
 {
     switch(event->response_type & ~0x80) {
+        case XCB_EXPOSE:
+            on_expose((xcb_expose_event_t*)event);
+            break;
         case XCB_CONFIGURE_REQUEST:
             on_configure_request((xcb_configure_request_event_t*)event);
             break;

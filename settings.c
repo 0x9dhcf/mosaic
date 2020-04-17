@@ -38,8 +38,9 @@ unsigned int    g_urgent_color      = 0xff0000;
 
 Shortcut g_shortcuts[] = {
     /* global */
-    {{K_MS,     XKB_KEY_Home},      CB_VOID,    {quit}, {0}},
-    {{K_MS,     XKB_KEY_d},         CB_VOID,    {dump}, {0}},
+    {{K_MS,     XKB_KEY_Home},      CB_VOID,    {quit},                                 {}},
+    {{K_MS,     XKB_KEY_d},         CB_VOID,    {dump},                                 {}},
+    {{K_MS,     XKB_KEY_b},         CB_VOID,    {toggle_bar},                           {}},
 
     /* focus */
     {{K_M,      XKB_KEY_Left},      CB_VOID,    {focus_previous_client},                {}},

@@ -72,6 +72,8 @@ struct xkb_state       *g_xkb_state;
 /* globals */
 void quit();
 void dump();
+void toggle_bar();
+void refresh_bar();
 
 /* monitors */
 void scan_monitors();
