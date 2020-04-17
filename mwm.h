@@ -23,18 +23,12 @@
 #ifndef __MWM_H__
 #define __MWM_H__
 
-#include <xcb/xcb.h>
-#include <xcb/xcb_ewmh.h>
-#include <xcb/xkb.h>
-#include <xkbcommon/xkbcommon.h>
-#include <xkbcommon/xkbcommon-compose.h>
-#include <xkbcommon/xkbcommon-x11.h>
-
 #include "monitor.h"
 #include "client.h"
+#include "x11.h"
 
 #ifndef VERSION
-#define VERSION "0.0"
+#define VERSION "0.0.0"
 #endif
 
 #define WMNAME "mwm"
@@ -42,32 +36,12 @@
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
 #define MIN(A, B) ((A) < (B) ? (A) : (B))
 
-/* atoms */
-enum {
-    WM_TAKE_FOCUS,
-    MWM_MONITOR_TAGS,
-    MWM_MONITOR_TAGSET,
-    MWM_FOCUSED,
-    MWM_FOCUSED_TAGSET,
-    MWM_ATOM_COUNT
-};
-
 typedef enum _Direction {
     D_UP,
     D_DOWN,
     D_LEFT,
     D_RIGHT
 } Direction;
-
-/* xcb context */
-xcb_connection_t       *g_xcb;
-int                     g_screen_id;
-xcb_screen_t           *g_screen;
-xcb_window_t            g_root;
-xcb_visualtype_t       *g_visual;
-xcb_ewmh_connection_t   g_ewmh;
-xcb_atom_t              g_atoms[MWM_ATOM_COUNT];
-struct xkb_state       *g_xkb_state;
 
 /* globals */
 void quit();

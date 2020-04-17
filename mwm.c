@@ -31,18 +31,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include <xcb/xcb.h>
-#include <xcb/xcb_aux.h>
-#include <xcb/xcb_keysyms.h>
-#include <xcb/xcb_ewmh.h>
-#include <xcb/xkb.h>
-#include <xcb/randr.h>
-#include <xkbcommon/xkbcommon.h>
-#include <xkbcommon/xkbcommon-compose.h>
-#include <xkbcommon/xkbcommon-x11.h>
-
 #include "mwm.h"
 #include "log.h"
+#include "x11.h"
 #include "monitor.h"
 #include "client.h"
 #include "hints.h"
@@ -51,28 +42,16 @@
 #include "bar.h"
 
 /* static functions */
-static void setup_xcb();
-static void setup_atoms();
-static void setup_window_manager();
-static void setup_shortcuts();
+static void setup();
 static void add_monitor(Monitor *monitor);
 static void del_monitor(Monitor *monitor);
 static void check_focus_consistency();
-static void cleanup_window_manager();
+static void cleanup();
 static void trap();
 static void usage();
 static void version();
 static unsigned int parse_color(const char* hex);
 static void swap(Client *c1, Client *c2);
-
-/* static variables */
-static const char *atom_names[MWM_ATOM_COUNT] = {
-    "WM_TAKE_FOCUS",
-    "MWM_MONITOR_TAGS",
-    "MWM_MONITOR_TAGSET",
-    "MWM_FOCUSED",
-    "MWM_FOCUSED_TAGSET",
-};
 
 static xcb_window_t supporting_window = XCB_NONE;
 static struct xkb_context *xkb_context = NULL;
@@ -91,54 +70,11 @@ static xcb_atom_t wm_delete_window_atom;
 
 static int running;
 
-void setup_xcb()
+void setup()
 {
-    g_xcb = xcb_connect(0, &g_screen_id);
-    if (xcb_connection_has_error(g_xcb))
-        FATAL("can't get xcb connection.");
+    /* connect to x11 */
+    x11_setup();
 
-    xcb_prefetch_extension_data(g_xcb, &xcb_xkb_id);
-    xcb_prefetch_extension_data(g_xcb, &xcb_randr_id);
-
-    xcb_screen_iterator_t it = xcb_setup_roots_iterator(xcb_get_setup(g_xcb));
-    for (int i = 0; i < g_screen_id; ++i)
-        xcb_screen_next(&it);
-    g_screen = it.data;
-    g_root = g_screen->root;
-    const xcb_query_extension_reply_t *ext_reply;
-    ext_reply = xcb_get_extension_data(g_xcb, &xcb_xkb_id);
-    if (!ext_reply->present)
-        FATAL("no xkb extension on this server.");
-    ext_reply = xcb_get_extension_data(g_xcb, &xcb_randr_id);
-    if (!ext_reply->present)
-        FATAL("no randr extension on this server.");
-}
-
-void setup_atoms()
-{
-    xcb_intern_atom_cookie_t cookies[MWM_ATOM_COUNT];
-    for (int i = 0; i < MWM_ATOM_COUNT; ++i)
-        cookies[i] = xcb_intern_atom(
-                g_xcb,
-                0,
-                strlen(atom_names[i]),
-                atom_names[i]);
-
-    for (int i = 0; i < MWM_ATOM_COUNT; ++i) {
-        xcb_intern_atom_reply_t *a = xcb_intern_atom_reply(
-                g_xcb,
-                cookies[i],
-                NULL);
-
-        if (a) {
-            g_atoms[i] = a->atom;
-            free(a);
-        }
-    }
-}
-
-void setup_window_manager()
-{
     /* check if a window manager is already running */
     xcb_void_cookie_t checkwm = xcb_change_window_attributes_checked(
             g_xcb,
@@ -152,11 +88,15 @@ void setup_window_manager()
 
     if (xcb_request_check(g_xcb, checkwm)) {
         free(init_atoms_cookie);
+        x11_cleanup();
         FATAL("A windows manager is already running!\n");
     }
 
     if (! xcb_ewmh_init_atoms_replies(&g_ewmh, init_atoms_cookie, NULL))
         free(init_atoms_cookie);
+
+    /* find the monitors */
+    scan_monitors();
 
     /* create the supporting window */
     supporting_window = xcb_generate_id(g_xcb);
@@ -319,10 +259,8 @@ void setup_window_manager()
         free(ac);
         free(tree);
     }
-}
 
-void setup_shortcuts()
-{
+    /* setup shortcut */
     xcb_ungrab_key(g_xcb, XCB_GRAB_ANY, g_root, XCB_MOD_MASK_ANY);
     xcb_key_symbols_t *ks = xcb_key_symbols_alloc(g_xcb);
     int i = 0;
@@ -402,7 +340,7 @@ void check_focus_consistency()
     xcb_flush(g_xcb);
 }
 
-void cleanup_window_manager()
+void cleanup()
 {
     xcb_aux_sync(g_xcb);
     xcb_grab_server(g_xcb);
@@ -425,8 +363,12 @@ void cleanup_window_manager()
         m = n;
     }
 
+    /* destroy the supporting window */
     xcb_destroy_window(g_xcb, supporting_window);
     xcb_ungrab_server(g_xcb);
+
+    /* disconnect from x11 */
+    x11_cleanup();
 }
 
 static void update_monitors(Monitor *scanned)
@@ -1300,11 +1242,7 @@ int main(int argc, char **argv)
         }
     }
 
-    setup_xcb();
-    setup_atoms();
-    scan_monitors();
-    setup_window_manager();
-    setup_shortcuts();
+    setup();
 
     /* trap signals */
     signal(SIGCHLD, SIG_IGN);
@@ -1367,9 +1305,7 @@ int main(int argc, char **argv)
     }
 
     bar_close();
-    cleanup_window_manager();
-    xcb_ewmh_connection_wipe(&g_ewmh);
-    xcb_disconnect(g_xcb);
+    cleanup();
 
     return 0;
 }
