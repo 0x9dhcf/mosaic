@@ -24,14 +24,14 @@
 
 #include <xcb/xcb.h>
 
-#include "log.h"
-#include "mwm.h"
-#include "x11.h"
-#include "rectangle.h"
-#include "monitor.h"
 #include "bar.h"
+#include "log.h"
+#include "monitor.h"
+#include "mwm.h"
+#include "rectangle.h"
+#include "settings.h"
+#include "x11.h"
 
-#define BAR_FONT "fixed"
 #define TAGS 10
 
 Bar g_bar;
@@ -55,8 +55,8 @@ void bar_open(Monitor *monitor)
             XCB_CW_OVERRIDE_REDIRECT |
             XCB_CW_EVENT_MASK,
             (int[]) {
-                0x000000,
-                0xffffff,
+                g_bgcolor,
+                g_fgcolor,
                 0,
                 XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_BUTTON_PRESS });
 
@@ -64,8 +64,8 @@ void bar_open(Monitor *monitor)
     xcb_open_font(
             g_xcb,
             g_bar.font,
-            strlen(BAR_FONT),
-            BAR_FONT);
+            strlen(g_font),
+            g_font);
 
     g_bar.gcontext = xcb_generate_id(g_xcb);
     xcb_create_gc(
@@ -74,8 +74,8 @@ void bar_open(Monitor *monitor)
             g_bar.window,
             XCB_GC_FOREGROUND | XCB_GC_BACKGROUND | XCB_GC_FONT,
             (int []) {
-                0xffffff,
-                0x000000,
+                g_fgcolor,
+                g_bgcolor,
                 g_bar.font
             });
 }
@@ -124,14 +124,14 @@ void bar_display(int mtags[32], int mtagset, char *cname, int ctagset)
     int pos = 0;
     for (int i = 0; i < 32; ++i) {
         if (mtags[i] || mtagset & (1L << i) ) {
-            /* white tag is active, grey if inactive */
+            /* fg_color tag are active, grey ones are inactive */
             xcb_change_gc(
                     g_xcb,
                     g_bar.gcontext,
                     XCB_GC_FOREGROUND,
                     (const int []) {
                         mtagset & (1L << (i)) ?
-                            0xffffff :
+                            g_fgcolor :
                             0x666666 });
 
             char str[2];
@@ -150,7 +150,7 @@ void bar_display(int mtags[32], int mtagset, char *cname, int ctagset)
         g_xcb,
         g_bar.gcontext,
         XCB_GC_FOREGROUND,
-        (const int []) { 0xffffff }); 
+        (const int []) { g_fgcolor }); 
     
     if (cname) {
         xcb_image_text_8(
