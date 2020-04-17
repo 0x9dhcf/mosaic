@@ -30,6 +30,7 @@
 #include "monitor.h"
 #include "client.h"
 #include "hints.h"
+#include "bar.h"
 
 #define DEFAULT_LAYOUT LT_RIGHT
 #define DEFAULT_SPLIT .6
@@ -332,6 +333,9 @@ void monitor_render(Monitor *monitor, GeometryStatus status)
     int fullscreen = 0;
     int rr = 0, rl = 0, rt = 0, rb = 0, wx = 0, wy = 0, ww = 0, wh = 0;
 
+    if (g_bar.monitor == monitor && g_bar.opened)
+        rt = BAR_HEIGHT;
+
     /* first round to get information about clients. */
     for (Client *c = monitor->head; c; c = c->next) {
         if (c->mode == MODE_FULLSCREEN)
@@ -360,6 +364,7 @@ void monitor_render(Monitor *monitor, GeometryStatus status)
     int mains = tilables < monitor->mains ? tilables : monitor->mains;
     int stacked = (tilables - mains) > 0 ? (tilables - mains ) : 0;
 
+#if 0
 #ifndef NDEBUG
     DEBUG("rendering: %s - (%d, %d), [%d x %d]", monitor->name, wx, wy, ww, wh);
     DEBUG("\ttilables: %d", tilables);
@@ -370,6 +375,7 @@ void monitor_render(Monitor *monitor, GeometryStatus status)
     DEBUG("\ttail: %p", monitor->tail);
     for (Client *c = monitor->head; c; c = c->next)
         DEBUG("\tclient: %p", c);
+#endif
 #endif
     /* compute tiles positions */
     if (tilables && !fullscreen) {
@@ -423,25 +429,3 @@ void monitor_update_main_views(Monitor *monitor, int by)
             monitor->mains = 1;
     }
 }
-
-//void monitor_add_main_views(Monitor *monitor, int nb)
-//{
-//    int tilables = 0;
-//    for (Client *c = monitor->head; c; c = c->next)
-//        if (c->mode == MODE_TILED && IS_VISIBLE(c))
-//                tilables++;
-//
-//    if (tilables >= monitor->mains + nb)
-//        monitor->mains += nb;
-//    else 
-//        monitor->mains = tilables;
-//}
-//
-//void monitor_remove_main_views(Monitor *monitor, int nb)
-//{
-//    if (monitor->mains - nb > 1)
-//        monitor->mains -= nb;
-//    else
-//        monitor->mains = 1;
-//}
-

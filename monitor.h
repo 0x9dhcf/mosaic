@@ -28,6 +28,7 @@
 #include "rectangle.h"
 
 typedef struct _Client Client;
+typedef struct _Bar Bar;
 
 typedef enum _Layout {
     LT_NONE,
@@ -60,8 +61,6 @@ void monitor_initialize(Monitor *monitor, const char *name, int x, int y, int wi
 void monitor_attach(Monitor *monitor, Client *client);
 void monitor_detach(Monitor *monitor, Client *client);
 void monitor_render(Monitor *monitor, GeometryStatus status);
-//void monitor_add_main_views(Monitor *monitor, int nb);
-//void monitor_remove_main_views(Monitor *monitor, int nb);
 void monitor_update_main_views(Monitor *monitor, int by);
 
 #endif

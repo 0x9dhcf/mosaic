@@ -70,9 +70,11 @@ extern unsigned int     g_border_width;
 extern unsigned int     g_normal_color;
 extern unsigned int     g_focused_color;
 extern unsigned int     g_urgent_color;
+/*
 extern unsigned int     g_hud_bgcolor;
 extern char             g_hud_font_face[256];
 extern unsigned int     g_hud_font_size;
+*/
 extern Rule             g_rules[];
 extern Shortcut         g_shortcuts[]; 
 

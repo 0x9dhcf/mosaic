@@ -69,6 +69,8 @@ typedef struct _Client {
     xcb_window_t    window;
     Mode            mode;
     Mode            saved_mode;
+    char            instance[256]; 
+    char            class[256]; 
     Rectangle       tiling_geometry;
     Rectangle       floating_geometry;
     int             border_width;

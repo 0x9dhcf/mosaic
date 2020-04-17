@@ -155,6 +155,8 @@ void client_initialize(Client *client, xcb_window_t window)
         char *p = xcb_get_property_value(cr);
         char *instance = p;
         char *class = p + strlen(instance) + 1;
+        strncpy(client->instance, instance ? instance : "broken", 255);
+        strncpy(client->class, class ? class : "broken", 255);
         int i = 0;
         while (g_rules[i].class_name) {
             if ((g_rules[i].instance_name && strcmp(g_rules[i].instance_name, instance) == 0) ||
