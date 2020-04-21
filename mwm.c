@@ -82,18 +82,10 @@ void setup()
             XCB_CW_EVENT_MASK,
             (int[]) {XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT});
 
-    xcb_intern_atom_cookie_t *init_atoms_cookie = xcb_ewmh_init_atoms(
-            g_xcb,
-            &g_ewmh);
-
     if (xcb_request_check(g_xcb, checkwm)) {
-        free(init_atoms_cookie);
         x11_cleanup();
         FATAL("A windows manager is already running!\n");
     }
-
-    if (! xcb_ewmh_init_atoms_replies(&g_ewmh, init_atoms_cookie, NULL))
-        free(init_atoms_cookie);
 
     /* find the monitors */
     scan_monitors();
