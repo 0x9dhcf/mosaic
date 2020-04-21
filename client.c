@@ -66,7 +66,6 @@ void client_initialize(Client *client, xcb_window_t window)
     client->state = STATE_ACCEPT_FOCUS;
     client->strut = (Strut){0};
     client->size_hints = (SizeHints){0};
-    client->transient = 0;
     client->transient = XCB_NONE;
     client->monitor = NULL;
     client->tagset = -1;

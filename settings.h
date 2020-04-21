@@ -44,12 +44,14 @@ typedef enum  _CallbackType {
     CB_INT_INT
 } CallbackType ;
 
+typedef struct _KeySequence {
+    unsigned int modifier;
+    xkb_keysym_t keysym;
+} KeySequence;
+
 typedef struct _Shortcut {
-    struct {
-        unsigned int modifier;
-        xkb_keysym_t keysym;
-    } sequence;
-    CallbackType type;
+    KeySequence     sequence;
+    CallbackType    type;
     union {
         void (*vcb)();
         void (*icb)(int);
@@ -57,6 +59,11 @@ typedef struct _Shortcut {
     } callback;
     int args[2];
 } Shortcut;
+
+typedef struct _Binding {
+    KeySequence     sequence;
+    char            *args[16];
+} Binding;
 
 typedef struct _Rule {
     char *class_name;
@@ -73,12 +80,8 @@ extern unsigned int     g_urgent_color;
 extern unsigned int     g_bgcolor;
 extern unsigned int     g_fgcolor;
 extern char             g_font[256];
-/*
-extern unsigned int     g_hud_bgcolor;
-extern char             g_hud_font_face[256];
-extern unsigned int     g_hud_font_size;
-*/
 extern Rule             g_rules[];
 extern Shortcut         g_shortcuts[]; 
+extern Binding          g_bindings[]; 
 
 
