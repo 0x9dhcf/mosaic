@@ -49,6 +49,7 @@ static void on_enter_notify(xcb_enter_notify_event_t *e);
 static void on_client_message(xcb_client_message_event_t *e);
 static void on_button_press(xcb_button_press_event_t *e);
 static void on_key_press(xcb_key_press_event_t *e);
+static void spawn(char **argv);
 
 void notify(Client *c)
 {
@@ -408,8 +409,7 @@ void on_button_press(xcb_button_press_event_t *e)
                 if (g_xcb)
                     close(xcb_get_file_descriptor(g_xcb));
                 setsid();
-                //execvp("xterm", {"-e ls"});
-                system("xterm");
+                system("uxterm");
                 exit(EXIT_SUCCESS);
             }
             if (pid > 0)
@@ -471,6 +471,31 @@ void on_key_press(xcb_key_press_event_t *e)
             }
         }
         i++;
+    }
+
+    i = 0;
+    while (g_bindings[i].args[0] != NULL) {
+        if (g_bindings[i].sequence.modifier == e->state &&
+                g_bindings[i].sequence.keysym == keysym)
+            spawn((char**)g_bindings[i].args);
+        i++;
+    }
+}
+
+void spawn(char **argv)
+{
+    if (fork() == 0) {
+        int pid = fork();
+        if (pid == 0) {
+            if (g_xcb)
+                close(xcb_get_file_descriptor(g_xcb));
+            setsid();
+            execvp(argv[0], argv);
+            exit(EXIT_SUCCESS);
+        }
+        if (pid > 0)
+            exit(EXIT_SUCCESS);
+
     }
 }
 

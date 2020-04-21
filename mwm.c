@@ -260,9 +260,10 @@ void setup()
         free(tree);
     }
 
-    /* setup shortcut */
+    /* setup shortcuts and bindings */
     xcb_ungrab_key(g_xcb, XCB_GRAB_ANY, g_root, XCB_MOD_MASK_ANY);
     xcb_key_symbols_t *ks = xcb_key_symbols_alloc(g_xcb);
+
     int i = 0;
     while (g_shortcuts[i].callback.vcb != NULL) {
         xcb_keycode_t *kcs;
@@ -280,6 +281,24 @@ void setup()
                     XCB_GRAB_MODE_ASYNC);
         i++;
     }
+
+    i = 0;
+    while (g_bindings[i].args[0] != NULL) {
+        xcb_keycode_t *kcs;
+        xcb_keycode_t *kc;
+        kcs = xcb_key_symbols_get_keycode(ks, g_bindings[i].sequence.keysym);
+        for (kc = kcs; *kc != XCB_NO_SYMBOL; kc++)
+            xcb_grab_key(
+                    g_xcb,
+                    1,
+                    g_root,
+                    g_bindings[i].sequence.modifier,
+                    *kc,
+                    XCB_GRAB_MODE_ASYNC,
+                    XCB_GRAB_MODE_ASYNC);
+        i++;
+    }
+
     xcb_key_symbols_free(ks);
 }
 

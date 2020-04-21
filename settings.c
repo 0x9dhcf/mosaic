@@ -37,7 +37,15 @@ unsigned int    g_focused_color     = 0x0000ff;
 unsigned int    g_urgent_color      = 0xff0000;
 unsigned int    g_bgcolor           = 0x1d2021;
 unsigned int    g_fgcolor           = 0xe2e2e2;
-char            g_font[256]         = "fixed";
+char            g_font[256]         = "-*-terminus-medium-r-normal-*-14-*-*-*-*-*-*-*";
+
+Rule g_rules[] = {
+    /* class                instance            TAGSET      State */
+    { "Gnome-calculator",   "gnome-calculor",   -1,         MODE_FLOATING },
+    { "Xephyr",             "Xephyr",           -1,         MODE_FLOATING },
+    { "Xmessage",           "xmessage",         -1,         MODE_FLOATING },
+    { NULL, NULL, 0, 0 }
+};
 
 Shortcut g_shortcuts[] = {
     /* global */
@@ -117,10 +125,20 @@ Shortcut g_shortcuts[] = {
     {{ 0, 0 }, 0, {NULL}, {0}}
 };
 
-Rule g_rules[] = {
-    /* class                instance            TAGSET      State */
-    { "Gnome-calculator",   "gnome-calculor",   -1,         MODE_FLOATING },
-    { "Xephyr",             "Xephyr",           -1,         MODE_FLOATING },
-    { "Xmessage",           "xmessage",         -1,         MODE_FLOATING },
-    { NULL, NULL, 0, 0 }
+Binding g_bindings[] = {
+    /* modifier key                                 arguments      */
+    { {K_M,     XKB_KEY_Return },                   {"uxterm"} },
+    { {K_MS,    XKB_KEY_Return },                   {"uxterm", "-e", "ranger" } },
+    { {K_M,     XKB_KEY_d },                        {"dmenu_run", "-b", "-fn", "Noto Sans:size=12", "-nb", "#1d2021", "-nf", "#888888", "-sb", "#1d2021", "-sf", "#eeeeec"} },
+    { {0,       XKB_KEY_XF86AudioRaiseVolume },     {"pactl", "set-sink-volume", "0", "+5%"} },
+    { {0,       XKB_KEY_XF86AudioLowerVolume },     {"pactl", "set-sink-volume", "0", "-5%"} },
+    { {0,       XKB_KEY_XF86AudioMute },            {"pactl", "set-sink-mute", "0", "toggle"} },
+    { {0,       XKB_KEY_XF86AudioMicMute },         {"pactl", "set-source-mute", "1", "toggle"} },
+    { {K_M,     XKB_KEY_XF86AudioMute },            {"pavucontrol"} },
+    { {0,       XKB_KEY_XF86MonBrightnessUp },      {"xbacklight", "+", "5" } },
+    { {0,       XKB_KEY_XF86MonBrightnessDown },    {"xbacklight", "-", "5" } },
+    { {0,       XKB_KEY_XF86Display },              {"xrandr", "--output", "HDMI1", "--auto", "--right-of", "eDP1"} },
+    { {K_M,     XKB_KEY_XF86Display },              {"xrandr", "--output", "HDMI1", "--off" } },
+    { { 0, 0 }, {NULL} }
 };
+

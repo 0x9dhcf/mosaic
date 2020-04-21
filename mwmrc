@@ -1,6 +1,5 @@
 #!/bin/bash
   
-killall -q mbind; mbind &
 killall -q mbar; mbar&
 killall -q redshift; redshift &
 
