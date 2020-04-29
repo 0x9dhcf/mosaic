@@ -31,7 +31,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "mwm.h"
+#include "mosaic.h"
 #include "log.h"
 #include "x11.h"
 #include "monitor.h"
@@ -165,7 +165,7 @@ void setup()
                 g_ewmh._NET_CLIENT_LIST
             });
 
-    /* setting up keyborad and listen changes */
+    /* setting up keyboard and listen changes */
     /* TODO: setup a handler. */
     unsigned char xkb_base_event;
     xkb_x11_setup_xkb_extension(
@@ -324,17 +324,17 @@ void check_focus_consistency()
 {
     if (focused_client &&
             focused_client->monitor == focused_monitor &&
-            IS_VISIBLE(focused_client) &&
-            IS_CLIENT_STATE(focused_client, STATE_ACCEPT_FOCUS))
+            client_is_visible(focused_client) &&
+            (focused_client->state & STATE_ACCEPT_FOCUS) == STATE_ACCEPT_FOCUS)
         return; /* everything is fine with the focus */
 
     /* focus the first focusable client of the focused monitor */
     Client *f = focused_monitor->head;
 
-    if (f && (! IS_VISIBLE(f) || ! IS_CLIENT_STATE(f, STATE_ACCEPT_FOCUS)))
+    if (f && (! client_is_visible(f) || (f->state & STATE_ACCEPT_FOCUS) != STATE_ACCEPT_FOCUS))
         f = client_next(f, MODE_ANY, STATE_ACCEPT_FOCUS);
 
-    if (! f || (! IS_VISIBLE(f) || ! IS_CLIENT_STATE(f, STATE_ACCEPT_FOCUS))) {
+    if (! f || (! client_is_visible(f) || (f->state & STATE_ACCEPT_FOCUS) != STATE_ACCEPT_FOCUS)) {
         focused_client = NULL;
         xcb_set_input_focus(
                 g_xcb,
@@ -696,7 +696,7 @@ void manage(xcb_window_t window)
             monitor_attach(t->monitor, c);
             monitor_render(t->monitor, GS_UNCHANGED);
         }
-    } else if (IS_CLIENT_STATE(c, STATE_STICKY)) {
+    } else if ((c->state & STATE_STICKY) == STATE_STICKY) {
         monitor_attach(primary_monitor, c);
         monitor_render(primary_monitor, GS_UNCHANGED);
         //hints_set_monitor(primary_monitor);
@@ -708,7 +708,7 @@ void manage(xcb_window_t window)
         //refresh_bar();
     }
 
-    if (IS_CLIENT_STATE(c, STATE_ACCEPT_FOCUS))
+    if ((c->state & STATE_ACCEPT_FOCUS) == STATE_ACCEPT_FOCUS)
         xcb_set_input_focus(
                 g_xcb,
                 XCB_INPUT_FOCUS_POINTER_ROOT,
@@ -801,22 +801,7 @@ void focus(Client *client)
 
     focused_client = client;
     focused_monitor = client->monitor;
-    client_set_focused(client, 1);
-    xcb_ewmh_set_active_window(&g_ewmh, g_screen_id, client->window);
-
-    xcb_client_message_event_t e;
-    e.type = XCB_CLIENT_MESSAGE;
-    e.window = client->window;
-    e.type = g_ewmh.WM_PROTOCOLS;
-    e.format = 32;
-    e.data.data32[0] = g_atoms[WM_TAKE_FOCUS];
-    e.data.data32[1] = XCB_CURRENT_TIME;
-    xcb_send_event(
-            g_xcb,
-            0,
-            client->window,
-            XCB_EVENT_MASK_NO_EVENT,
-            (char*)&e);
+    client_receive_focus(client);
     hints_set_focused(focused_client);
     hints_set_monitor(focused_monitor);
     refresh_bar();
@@ -825,7 +810,7 @@ void focus(Client *client)
 
 void unfocus(Client *client) {
     focused_client = NULL;
-    client_set_focused(client, 0);
+    client_loose_focus(client);
     hints_set_focused(focused_client);
     refresh_bar();
     xcb_flush(g_xcb);
@@ -1016,7 +1001,7 @@ void focused_client_toggle_mode()
         return;
 
     if (focused_client->mode ==  MODE_FULLSCREEN ||
-            IS_CLIENT_STATE(focused_client, STATE_STICKY))
+            (focused_client->state & STATE_STICKY) == STATE_STICKY)
         return;
 
     focused_client->mode = focused_client->mode == MODE_FLOATING ?
@@ -1030,22 +1015,27 @@ void focused_client_toggle_mode()
 void swap(Client *c1, Client *c2) {
     Client t;
 
-#define CLIENT_COPY_CONTENT(c1 , c2)\
+#define COPY(c1 , c2)\
     (c2)->window = (c1)->window;\
     (c2)->mode = (c1)->mode;\
+    (c2)->saved_mode = (c1)->saved_mode;\
+    strncpy((c2)->instance, (c1)->instance, 255);\
+    strncpy((c2)->class, (c1)->class, 255);\
     (c2)->border_width = (c1)->border_width;\
     (c2)->border_color = (c1)->border_color;\
     (c2)->state = (c1)->state;\
     (c2)->strut = (c1)->strut;\
     (c2)->size_hints = (c1)->size_hints;\
+    (c2)->transient = (c1)->transient;\
     (c2)->monitor = (c1)->monitor;\
-    (c2)->tagset = (c1)->tagset;
+    (c2)->tagset = (c1)->tagset;\
+    (c2)->saved_tagset = (c1)->saved_tagset;
 
-    CLIENT_COPY_CONTENT(c1, &t);
-    CLIENT_COPY_CONTENT(c2, c1);
-    CLIENT_COPY_CONTENT(&t, c2);
+    COPY(c1, &t);
+    COPY(c2, c1);
+    COPY(&t, c2);
 
-#undef CLIENT_COPY_CONTENT
+#undef COPY
 
     client_show(c1);
     client_show(c2);

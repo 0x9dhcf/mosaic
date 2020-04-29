@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Pierre Evenou
+ * Copyright (c) 2019-2020 Pierre Evenou
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,7 @@
 
 #include "hints.h"
 #include "log.h"
-#include "mwm.h"
+#include "mosaic.h"
 
 void hints_set_monitor(Monitor *monitor)
 {

@@ -20,8 +20,8 @@
  * SOFTWARE.
  */
 
-#ifndef __MWM_CLIENT_H__
-#define __MWM_CLIENT_H__
+#ifndef __CLIENT_H__
+#define __CLIENT_H__
 
 #include <xcb/xcb.h>
 #include <xcb/xcb_icccm.h>
@@ -69,8 +69,8 @@ typedef struct _Client {
     xcb_window_t    window;
     Mode            mode;
     Mode            saved_mode;
-    char            instance[256]; 
-    char            class[256]; 
+    char            instance[256];
+    char            class[256];
     Rectangle       tiling_geometry;
     Rectangle       floating_geometry;
     int             border_width;
@@ -86,24 +86,27 @@ typedef struct _Client {
     struct _Client  *next;
 } Client;
 
-#define IS_CLIENT_STATE(c, s) ((c->state & s) == (s))
-#define IS_CLIENT_STATE_NOT(c, s) (! IS_CLIENT_STATE(c, s))
-#define CLIENT_SET_STATE(c, s) ((c->state |= s))
-#define CLIENT_UNSET_STATE(c, s) ((c->state &= ~s))
-#define IS_VISIBLE(c) ((c->tagset & c->monitor->tagset) || ! c->tagset)
-
-void client_initialize(Client *client, xcb_window_t window);
-void client_set_sticky(Client *client, int sticky);
-void client_set_fullscreen(Client *client, int fullscreen);
-void client_set_urgent(Client *client, int urgency);
-void client_hide(Client *client);
-void client_show(Client *client);
-void client_apply_size_hints(Client *client);
-void client_set_focused(Client *client, int focus);
-int client_update_strut(Client *client);
-int client_update_size_hints(Client *client);
-int client_update_wm_hints(Client *client);
-int client_update_window_type(Client *client);
+void client_initialize(Client *c, xcb_window_t w);
+void client_set_floating(Client *c, Rectangle *r);
+void client_set_tiling(Client *c, Rectangle *r);
+void client_set_mode(Client *c, Mode m);
+void client_set_tagset(Client *c, int tagset);
+void client_set_sticky(Client *c, int sticky);
+void client_set_fullscreen(Client *c, int fullscreen);
+void client_set_urgent(Client *c, int urgency);
+void client_set_input_focus(Client *c);
+void client_receive_focus(Client *c);
+void client_loose_focus(Client *c);
+void client_hide(Client *c);
+void client_show(Client *c);
+void client_apply_size_hints(Client *c);
+void client_notify(Client *c);
+int client_is_visible(Client *c);
+int client_update_strut(Client *c);
+int client_update_size_hints(Client *c);
+int client_update_wm_hints(Client *c);
+int client_update_window_type(Client *c);
+// Move to monitor
 Client *client_next(Client *client, Mode mode, State state);
 Client *client_previous(Client *client, Mode mode, State state);
 

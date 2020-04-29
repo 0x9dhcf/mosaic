@@ -20,8 +20,8 @@
  * SOFTWARE.
  */
 
-#ifndef __MWM_EVENTS_H__
-#define __MWM_EVENTS_H__
+#ifndef __EVENTS_H__
+#define __EVENTS_H__
 
 #include <xcb/xcb.h>
 

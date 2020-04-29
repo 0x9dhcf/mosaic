@@ -21,9 +21,9 @@
 
 .POSIX:
 
-MAJOR = 2
-MINOR = 1
-PATCH = 1
+MAJOR = 3
+MINOR = 0
+PATCH = 0
 
 # paths
 PREFIX ?= /usr/local
@@ -58,26 +58,26 @@ SRC = $(wildcard *.c)
 HDR = $(wildcard *.h)
 OBJ = $(SRC:.c=.o)
 
-all: mwm
+all: mosaic
 
 .c.o:
 	$(CC) $(CFLAGS) -c $<
 
 $(OBJ): $(HDR)
 
-mwm: $(OBJ)
+mosaic: $(OBJ)
 	$(CC) -o $@ $(OBJ) $(LDFLAGS)
 
 clean:
-	rm -f mwm $(OBJ)
+	rm -f mosaic $(OBJ)
 
-install: mwm
+install: mosaic
 	mkdir -p $(PREFIX)/bin
-	cp -f mwm $(PREFIX)/bin
-	cp -f mwm-session $(PREFIX)/bin
+	cp -f mosaic $(PREFIX)/bin
+	cp -f mosaic-session $(PREFIX)/bin
 
 uninstall:
-	rm -f $(PREFIX)/bin/mwm
-	rm -f $(PREFIX)/bin/mwm-session
+	rm -f $(PREFIX)/bin/mosaic
+	rm -f $(PREFIX)/bin/mosaic-session
 
 .PHONY: all clean install uninstall

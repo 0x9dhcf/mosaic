@@ -20,8 +20,8 @@
  * SOFTWARE.
  */
 
-#ifndef __MWM_HINTS_H__
-#define __MWM_HINTS_H__
+#ifndef __HINTS_H__
+#define __HINTS_H__
 
 typedef struct _Monitor Monitor;
 typedef struct _Client Client;

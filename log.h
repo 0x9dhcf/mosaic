@@ -20,8 +20,8 @@
  * SOFTWARE.
  */
 
-#ifndef __MWM_LOG_H__
-#define __MWM_LOG_H__
+#ifndef __LOG_H__
+#define __LOG_H__
 
 #include <stdio.h>
 #include <stdlib.h>

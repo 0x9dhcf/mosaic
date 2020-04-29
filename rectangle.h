@@ -20,8 +20,8 @@
  * SOFTWARE.
  */
 
-#ifndef __MWM_RECTANGLE_H__
-#define __MWM_RECTANGLE_H__
+#ifndef __RECTANGLE_H__
+#define __RECTANGLE_H__
 
 typedef struct _Rectangle {
     int x, y, width, height;

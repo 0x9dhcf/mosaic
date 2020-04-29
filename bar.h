@@ -20,8 +20,8 @@
  * SOFTWARE.
  */
 
-#ifndef __MWM_BAR_H__
-#define __MWM_BAR_H__
+#ifndef __BAR_H__
+#define __BAR_H__
 
 #include <xcb/xcb.h>
 
