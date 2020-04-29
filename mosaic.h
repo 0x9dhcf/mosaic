@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Pierre Evenou
+ * Copyright (c) 2019-2020 Pierre Evenou
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,18 +20,18 @@
  * SOFTWARE.
  */
 
-#ifndef __MWM_H__
-#define __MWM_H__
+#ifndef __MOSAIC_H__
+#define __MOSAIC_H__
 
-#include "monitor.h"
 #include "client.h"
+#include "monitor.h"
 #include "x11.h"
 
 #ifndef VERSION
 #define VERSION "0.0.0"
 #endif
 
-#define WMNAME "mwm"
+#define WMNAME "mosaic"
 
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
 #define MIN(A, B) ((A) < (B) ? (A) : (B))

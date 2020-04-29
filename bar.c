@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Pierre Evenou
+ * Copyright (c) 2019-2020 Pierre Evenou
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,7 @@
 #include "bar.h"
 #include "log.h"
 #include "monitor.h"
-#include "mwm.h"
+#include "mosaic.h"
 #include "rectangle.h"
 #include "settings.h"
 #include "x11.h"

@@ -21,7 +21,7 @@
  */
 
 #include "settings.h"
-#include "mwm.h"
+#include "mosaic.h"
 
 #define SIZE_INC    30
 

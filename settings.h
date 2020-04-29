@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Pierre Evenou
+ * Copyright (c) 2019-2020 Pierre Evenou
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +30,7 @@
 #include <xkbcommon/xkbcommon-compose.h>
 #include <xkbcommon/xkbcommon-x11.h>
 
-#define AUTOSTART ".mwmrc"
+#define AUTOSTART ".mosaicrc"
 
 #ifndef NDEBUG
 #define MODKEY XCB_MOD_MASK_1

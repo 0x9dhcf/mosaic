@@ -20,8 +20,8 @@
  * SOFTWARE.
  */
 
-#ifndef __MWM_MONITOR_H__
-#define __MWM_MONITOR_H__
+#ifndef __MONITOR_H__
+#define __MONITOR_H__
 
 #include <xcb/xcb.h>
 
