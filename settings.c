@@ -37,6 +37,7 @@ unsigned int    g_focused_color     = 0x0000ff;
 unsigned int    g_urgent_color      = 0xff0000;
 unsigned int    g_bgcolor           = 0x1d2021;
 unsigned int    g_fgcolor           = 0xe2e2e2;
+double          g_split             = .6f;
 char            g_font[256]         = "-*-terminus-medium-r-normal-*-14-*-*-*-*-*-*-*";
 
 Rule g_rules[] = {
@@ -103,6 +104,7 @@ Shortcut g_shortcuts[] = {
     {{K_MCS,    XKB_KEY_Down},      CB_INT_INT, {focused_client_resize},                {0, 30}},
     {{K_MCS,    XKB_KEY_Left},      CB_INT_INT, {focused_client_resize},                {-30, 0}},
     {{K_MCS,    XKB_KEY_Right},     CB_INT_INT, {focused_client_resize},                {30, 0}},
+    {{K_MCS,    XKB_KEY_equal},     CB_INT_INT, {focused_client_resize},                {0, 0}},
     {{K_MS,     XKB_KEY_1},         CB_INT,     {focused_client_set_tag},               {1}},
     {{K_MS,     XKB_KEY_2},         CB_INT,     {focused_client_set_tag},               {2}},
     {{K_MS,     XKB_KEY_3},         CB_INT,     {focused_client_set_tag},               {3}},
