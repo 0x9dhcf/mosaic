@@ -1150,6 +1150,11 @@ void focused_client_resize(int width, int height)
             monitor_render(focused_monitor, GS_UNCHANGED);
             xcb_flush(g_xcb);
         }
+        if (width == 0 && height == 0) {
+            focused_monitor->split = g_split;
+            monitor_render(focused_monitor, GS_UNCHANGED);
+            xcb_flush(g_xcb);
+        }
     }
 }
 

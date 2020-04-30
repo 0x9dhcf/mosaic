@@ -79,6 +79,7 @@ extern unsigned int     g_focused_color;
 extern unsigned int     g_urgent_color;
 extern unsigned int     g_bgcolor;
 extern unsigned int     g_fgcolor;
+extern double           g_split;
 extern char             g_font[256];
 extern Rule             g_rules[];
 extern Shortcut         g_shortcuts[]; 

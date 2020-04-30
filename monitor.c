@@ -25,15 +25,15 @@
 #include <string.h>
 #include <limits.h>
 
-#include "mosaic.h"
-#include "log.h"
-#include "monitor.h"
+#include "bar.h"
 #include "client.h"
 #include "hints.h"
-#include "bar.h"
+#include "log.h"
+#include "monitor.h"
+#include "mosaic.h"
+#include "settings.h"
 
 #define DEFAULT_LAYOUT LT_RIGHT
-#define DEFAULT_SPLIT .6
 #define DEFAULT_MAINS 1
 
 static void apply_none_layout(
@@ -242,7 +242,7 @@ void monitor_initialize(Monitor *monitor, const char *name, int x, int y, int wi
     strncpy(monitor->name, name, 127);
     monitor->geometry = (Rectangle) { x, y, width, height };
     monitor->layout = DEFAULT_LAYOUT;
-    monitor->split = DEFAULT_SPLIT;
+    monitor->split = g_split;
     monitor->mains = DEFAULT_MAINS;
     memset(monitor->tags, 0, 32 * sizeof(int));
     monitor->tagset = 1;
