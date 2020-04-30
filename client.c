@@ -285,6 +285,11 @@ void client_hide(Client *c)
     Rectangle g = c->mode == MODE_TILED ?
         c->tiling_geometry : c->floating_geometry;
 
+    /*
+     * "freeze" the window while moving it
+     * e.g don't get enter_event that triggers focus_in
+     * while moving a client
+     */
     xcb_grab_pointer(
                 g_xcb,
                 0,
@@ -300,7 +305,9 @@ void client_hide(Client *c)
             g_xcb,
             c->window,
             XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y,
-            (const int []) { -(g.width), -(g.height) });
+            (const int []) { 
+                -((int)g.width + 2 * c->border_width),
+                -((int)g.height + 2 * c->border_width) });
 
     xcb_ungrab_pointer(g_xcb, XCB_CURRENT_TIME);
 }
