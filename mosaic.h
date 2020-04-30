@@ -56,7 +56,7 @@ void scan_monitors();
 void manage(xcb_window_t window);
 Client * lookup(xcb_window_t window);
 void forget(xcb_window_t window);
-void find_focus();
+void find_focus(int fallback);
 void focus(Client *client);
 void unfocus(Client *client);
 

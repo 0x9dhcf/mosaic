@@ -713,7 +713,7 @@ void forget(xcb_window_t window)
         else
            f = client_previous(c, MODE_ANY, STATE_ACCEPT_FOCUS);
 
-        if (f) 
+        if (f)
             client_set_input_focus(f);
     }
     Monitor *m = c->monitor;
@@ -737,19 +737,31 @@ void forget(xcb_window_t window)
     xcb_flush(g_xcb);
 }
 
-void find_focus() {
+void find_focus(int fallback) {
+    int found = 0;
     focused_client = NULL;
     Client *f = focused_monitor->head;
     if (f) {
-        if ((f->state & STATE_ACCEPT_FOCUS) == STATE_ACCEPT_FOCUS) {
+        if (client_is_visible(f) && (f->state & STATE_ACCEPT_FOCUS) == STATE_ACCEPT_FOCUS) {
+            found = 1;
             client_set_input_focus(f);
         } else {
             Client *nf = client_next(f, MODE_ANY, STATE_ACCEPT_FOCUS);
-            if (nf)
+            if (nf) {
+                found = 1;
                 client_set_input_focus(nf);
+            }
         }
     }
-    refresh_bar();
+    if (! found && fallback) {
+        xcb_set_input_focus(
+                g_xcb,
+                XCB_INPUT_FOCUS_POINTER_ROOT,
+                g_root,
+                XCB_CURRENT_TIME);
+    }
+
+    //refresh_bar();
     xcb_flush(g_xcb);
 }
 
@@ -780,10 +792,8 @@ void focus_next_client()
         return;
 
     Client *c = client_next(focused_client, MODE_ANY, STATE_ACCEPT_FOCUS);
-    if (c) {
+    if (c)
         client_set_input_focus(c);
-
-    }
     xcb_flush(g_xcb);
 }
 
@@ -907,6 +917,10 @@ void focused_monitor_rotate_counter_clockwise()
 void focused_monitor_set_tag(int tag)
 {
     focused_monitor->tagset = (1L << (tag - 1));
+
+    if (! focused_client || ! client_is_visible(focused_client))
+        find_focus(1);
+
     monitor_render(focused_monitor, GS_UNCHANGED);
     hints_set_monitor(focused_monitor);
     refresh_bar();
@@ -920,6 +934,9 @@ void focused_monitor_toggle_tag(int tag)
         focused_monitor->tagset &= ~(1L << (tag - 1));
     else
         focused_monitor->tagset |= (1L << (tag - 1));
+
+    if (! focused_client || ! client_is_visible(focused_client))
+        find_focus(1);
 
     monitor_render(focused_monitor, GS_UNCHANGED);
     hints_set_monitor(focused_monitor);
@@ -1112,6 +1129,9 @@ void focused_client_set_tag(int tag)
     focused_client->tagset |= (1L << (tag - 1));
     focused_monitor->tags[tag - 1]++;
 
+    if (! client_is_visible(focused_client))
+        find_focus(1);
+
     monitor_render(focused_monitor, GS_UNCHANGED);
     hints_set_focused(focused_client);
     hints_set_monitor(focused_monitor);
@@ -1138,6 +1158,9 @@ void focused_client_toggle_tag(int tag)
     if (focused_monitor->tags[tag - 1] == 0 ||
             focused_monitor->tagset & (1L << (tag - 1)))
         monitor_render(focused_monitor, GS_UNCHANGED);
+
+    if (! client_is_visible(focused_client))
+        find_focus(1);
 
     hints_set_focused(focused_client);
     hints_set_monitor(focused_monitor);

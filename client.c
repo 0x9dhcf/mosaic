@@ -623,6 +623,7 @@ int client_update_window_type(Client *c)
     return refresh;
 }
 
+/* client next and previous assume that the client should be visible */
 #define CLIENT_MATCH_MODE_AND_STATE(c, m, s)\
         ((m == MODE_ANY || c->mode == m) && (c->state & s) ==  s && client_is_visible(c))
 

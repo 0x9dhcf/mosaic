@@ -200,7 +200,9 @@ void on_focus_in(xcb_focus_in_event_t *e)
         return;
 
     if (e->event == g_root) {
-        find_focus();
+        find_focus(0);
+        refresh_bar();
+        xcb_flush(g_xcb);
         return;
     }
 
