@@ -149,8 +149,8 @@ void client_initialize(Client *c, xcb_window_t w)
         char *p = xcb_get_property_value(cr);
         char *instance = p;
         char *class = p + strlen(instance) + 1;
-        strncpy(c->instance, instance ? instance : "broken", 255);
-        strncpy(c->class, class ? class : "broken", 255);
+        strncpy(c->instance, instance ? instance : "Unknown", 255);
+        strncpy(c->class, class ? class : "Unknown", 255);
         int i = 0;
         while (g_rules[i].class_name) {
             if ((g_rules[i].instance_name && strcmp(g_rules[i].instance_name, instance) == 0) ||
@@ -245,6 +245,16 @@ void client_set_urgent(Client *c, int urgency)
             { urgency ?  g_urgent_color : g_normal_color });
 }
 
+void client_set_input_focus(Client *c)
+{
+    if (c && (c->state & STATE_ACCEPT_FOCUS) == STATE_ACCEPT_FOCUS)
+        xcb_set_input_focus(
+                g_xcb,
+                XCB_INPUT_FOCUS_POINTER_ROOT,
+                c->window,
+                XCB_CURRENT_TIME);
+}
+
 void client_receive_focus(Client *c)
 {
     xcb_change_window_attributes(
@@ -259,22 +269,6 @@ void client_receive_focus(Client *c)
                 c->window,
                 XCB_CONFIG_WINDOW_STACK_MODE,
                 (const unsigned int[]) { XCB_STACK_MODE_ABOVE });
-
-    xcb_ewmh_set_active_window(&g_ewmh, g_screen_id, c->window);
-
-    xcb_client_message_event_t e;
-    e.type = XCB_CLIENT_MESSAGE;
-    e.window = c->window;
-    e.type = g_ewmh.WM_PROTOCOLS;
-    e.format = 32;
-    e.data.data32[0] = g_atoms[WM_TAKE_FOCUS];
-    e.data.data32[1] = XCB_CURRENT_TIME;
-    xcb_send_event(
-            g_xcb,
-            0,
-            c->window,
-            XCB_EVENT_MASK_NO_EVENT,
-            (char*)&e);
 }
 
 void client_loose_focus(Client *c)
@@ -313,12 +307,9 @@ void client_hide(Client *c)
 
 void client_show(Client *c)
 {
-    DEBUG_FUNCTION;
-
     Rectangle g = c->mode == MODE_TILED ?
         c->tiling_geometry : c->floating_geometry;
 
-    DEBUG("client: %s, (%d, %d) [%d, %d]", c->instance, g.x, g.y, g.width, g.height);
     /*
      * "freeze" the window while moving it
      * e.g don't get enter_event that triggers focus_in

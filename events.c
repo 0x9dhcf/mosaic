@@ -199,10 +199,32 @@ void on_focus_in(xcb_focus_in_event_t *e)
     if (e->detail == XCB_NOTIFY_DETAIL_POINTER)
         return;
 
+    if (e->event == g_root) {
+        find_focus();
+        return;
+    }
+
     Client *c = lookup(e->event);
     if (c && client_is_visible(c) &&
             (c->state & STATE_ACCEPT_FOCUS) == STATE_ACCEPT_FOCUS)
         focus(c);
+
+    xcb_ewmh_set_active_window(&g_ewmh, g_screen_id, e->event);
+
+    xcb_client_message_event_t evt;
+    evt.type = XCB_CLIENT_MESSAGE;
+    evt.window = e->event;
+    evt.type = g_ewmh.WM_PROTOCOLS;
+    evt.format = 32;
+    evt.data.data32[0] = g_atoms[WM_TAKE_FOCUS];
+    evt.data.data32[1] = XCB_CURRENT_TIME;
+    xcb_send_event(
+            g_xcb,
+            0,
+            evt.window,
+            XCB_EVENT_MASK_NO_EVENT,
+            (char*)&e);
+    xcb_flush(g_xcb);
 }
 
 void on_focus_out(xcb_focus_out_event_t *e)
@@ -224,14 +246,8 @@ void on_enter_notify(xcb_enter_notify_event_t *e)
         return;
 
     Client *c = lookup(e->event);
-    if (c && (c->state & STATE_ACCEPT_FOCUS) == STATE_ACCEPT_FOCUS) {
-        xcb_set_input_focus(
-                g_xcb,
-                XCB_INPUT_FOCUS_POINTER_ROOT,
-                c->window,
-                XCB_CURRENT_TIME);
-        xcb_flush(g_xcb);
-    }
+    client_set_input_focus(c);
+    xcb_flush(g_xcb);
 }
 
 void on_client_message(xcb_client_message_event_t *e)
@@ -242,13 +258,8 @@ void on_client_message(xcb_client_message_event_t *e)
     if (! c)
         return;
 
-    if (e->type == g_ewmh._NET_ACTIVE_WINDOW &&
-            (c->state & STATE_ACCEPT_FOCUS)== STATE_ACCEPT_FOCUS)
-        xcb_set_input_focus(
-                g_xcb,
-                XCB_INPUT_FOCUS_POINTER_ROOT,
-                c->window,
-                XCB_CURRENT_TIME);
+    if (e->type == g_ewmh._NET_ACTIVE_WINDOW)
+        client_set_input_focus(c);
 
     if (e->type == g_ewmh._NET_WM_STATE) {
 #define STATE(event, atom) (event->data.data32[1] == atom || event->data.data32[2] == atom)
@@ -337,13 +348,15 @@ void on_button_press(xcb_button_press_event_t *e)
 
     Client *c = lookup(e->event);
 
-    if (c && (c->state & STATE_ACCEPT_FOCUS) == STATE_ACCEPT_FOCUS
-            && e->detail == XCB_BUTTON_INDEX_1)
-        xcb_set_input_focus(
-                g_xcb,
-                XCB_INPUT_FOCUS_POINTER_ROOT,
-                c->window,
-                XCB_CURRENT_TIME);
+    if (c)
+        client_set_input_focus(c);
+    //if (c && (c->state & STATE_ACCEPT_FOCUS) == STATE_ACCEPT_FOCUS
+    //        && e->detail == XCB_BUTTON_INDEX_1)
+    //    xcb_set_input_focus(
+    //            g_xcb,
+    //            XCB_INPUT_FOCUS_POINTER_ROOT,
+    //            c->window,
+    //            XCB_CURRENT_TIME);
 
     xcb_allow_events(g_xcb, XCB_ALLOW_REPLAY_POINTER, XCB_CURRENT_TIME);
     xcb_flush(g_xcb);

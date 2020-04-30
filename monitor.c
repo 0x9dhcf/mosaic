@@ -274,12 +274,12 @@ void monitor_attach(Monitor *monitor, Client *client)
 
     /* default policy for floatings other than fixed
      * is to be centered on the monitor */
-    //client->floating_geometry.x =
-    //    (monitor->geometry.x + monitor->geometry.width / 2) -
-    //    client->floating_geometry.width / 2;
-    //client->floating_geometry.y =
-    //    (monitor->geometry.y + monitor->geometry.height / 2) -
-    //    client->floating_geometry.height / 2;
+    client->floating_geometry.x =
+        (monitor->geometry.x + monitor->geometry.width / 2) -
+        client->floating_geometry.width / 2;
+    client->floating_geometry.y =
+        (monitor->geometry.y + monitor->geometry.height / 2) -
+        client->floating_geometry.height / 2;
 }
 
 void monitor_detach(Monitor *monitor, Client *client)
@@ -304,6 +304,27 @@ void monitor_detach(Monitor *monitor, Client *client)
 
     client->monitor = NULL;
     client->next = NULL;
+}
+
+void monitor_update_main_views(Monitor *monitor, int by)
+{
+    if (by > 0) {
+
+        int tilables = 0;
+        for (Client *c = monitor->head; c; c = c->next)
+            if (c->mode == MODE_TILED && client_is_visible(c))
+                tilables++;
+
+        if (tilables >= monitor->mains + by)
+            monitor->mains += by;
+        else
+            monitor->mains = tilables;
+    } else {
+        if (monitor->mains + by > 1)
+            monitor->mains += by;
+        else
+            monitor->mains = 1;
+    }
 }
 
 void monitor_render(Monitor *monitor, GeometryStatus status)
@@ -407,23 +428,4 @@ void monitor_render(Monitor *monitor, GeometryStatus status)
     }
 }
 
-void monitor_update_main_views(Monitor *monitor, int by)
-{
-    if (by > 0) {
 
-        int tilables = 0;
-        for (Client *c = monitor->head; c; c = c->next)
-            if (c->mode == MODE_TILED && client_is_visible(c))
-                tilables++;
-
-        if (tilables >= monitor->mains + by)
-            monitor->mains += by;
-        else
-            monitor->mains = tilables;
-    } else {
-        if (monitor->mains + by > 1)
-            monitor->mains += by;
-        else
-            monitor->mains = 1;
-    }
-}
