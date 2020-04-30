@@ -738,6 +738,7 @@ void forget(xcb_window_t window)
 }
 
 void find_focus() {
+    focused_client = NULL;
     Client *f = focused_monitor->head;
     if (f) {
         if ((f->state & STATE_ACCEPT_FOCUS) == STATE_ACCEPT_FOCUS) {
@@ -748,6 +749,7 @@ void find_focus() {
                 client_set_input_focus(nf);
         }
     }
+    refresh_bar();
     xcb_flush(g_xcb);
 }
 
