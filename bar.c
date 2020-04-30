@@ -124,7 +124,7 @@ void bar_display(int mtags[32], int mtagset, char *cname, int ctagset)
     int pos = 0;
     for (int i = 0; i < 32; ++i) {
         if (mtags[i] || mtagset & (1L << i) ) {
-            /* fg_color tag are active, grey ones are inactive */
+            /* fgcolor tag are active, grey ones are inactive */
             xcb_change_gc(
                     g_xcb,
                     g_bar.gcontext,
@@ -158,7 +158,7 @@ void bar_display(int mtags[32], int mtagset, char *cname, int ctagset)
                 strlen(cname),
                 g_bar.window,
                 g_bar.gcontext,
-                .30 * g_bar.monitor->geometry.width, 16,
+                .20 * g_bar.monitor->geometry.width, 16,
                 cname);
     }
 
@@ -172,11 +172,20 @@ void bar_display(int mtags[32], int mtagset, char *cname, int ctagset)
                     strlen(str),
                     g_bar.window,
                     g_bar.gcontext,
-                    .60 * g_bar.monitor->geometry.width + (20 * pos++) , 16,
+                    .40 * g_bar.monitor->geometry.width + (20 * pos++) , 16,
                     str);
         }
     }
-
+/*
+    xcb_query_text_extents_reply_t *extents = xcb_query_text_extents_reply(
+            g_xcb,
+            xcb_query_text_extents (
+                    g_xcb,
+                    g_bar.font,
+                    strlen(VERSION),
+                    VERSION),
+            NULL);
+*/
     /* version */
     xcb_image_text_8(
             g_xcb,

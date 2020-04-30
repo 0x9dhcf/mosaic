@@ -27,4 +27,6 @@ exec mosaic\
     --border-width 2\
     --normal-color "#333333"\
     --focused-color "#888888"\
-    --urgent-color "#fb4934"
+    --urgent-color "#fb4934"\
+    --bg-color "#1d2021"\
+    --fg-color "#e2e2e2"

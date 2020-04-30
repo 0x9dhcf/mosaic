@@ -35,8 +35,8 @@ unsigned int    g_border_width      = 1;
 unsigned int    g_normal_color      = 0x888888;
 unsigned int    g_focused_color     = 0x0000ff;
 unsigned int    g_urgent_color      = 0xff0000;
-unsigned int    g_bgcolor           = 0x1d2021;
-unsigned int    g_fgcolor           = 0xe2e2e2;
+unsigned int    g_bgcolor           = 0x000000;
+unsigned int    g_fgcolor           = 0xffffff;
 double          g_split             = .6f;
 char            g_font[256]         = "-*-terminus-medium-r-normal-*-14-*-*-*-*-*-*-*";
 

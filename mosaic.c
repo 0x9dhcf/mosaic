@@ -45,7 +45,6 @@
 static void setup();
 static void add_monitor(Monitor *monitor);
 static void del_monitor(Monitor *monitor);
-static void check_focus_consistency();
 static void cleanup();
 static void trap();
 static void usage();
@@ -320,37 +319,6 @@ void del_monitor(Monitor *monitor)
         monitor_tail = monitor->prev;
 }
 
-void check_focus_consistency()
-{
-    if (focused_client &&
-            focused_client->monitor == focused_monitor &&
-            client_is_visible(focused_client) &&
-            (focused_client->state & STATE_ACCEPT_FOCUS) == STATE_ACCEPT_FOCUS)
-        return; /* everything is fine with the focus */
-
-    /* focus the first focusable client of the focused monitor */
-    Client *f = focused_monitor->head;
-
-    if (f && (! client_is_visible(f) || (f->state & STATE_ACCEPT_FOCUS) != STATE_ACCEPT_FOCUS))
-        f = client_next(f, MODE_ANY, STATE_ACCEPT_FOCUS);
-
-    if (! f || (! client_is_visible(f) || (f->state & STATE_ACCEPT_FOCUS) != STATE_ACCEPT_FOCUS)) {
-        focused_client = NULL;
-        xcb_set_input_focus(
-                g_xcb,
-                XCB_INPUT_FOCUS_POINTER_ROOT,
-                g_root,
-                XCB_CURRENT_TIME);
-    } else {
-        xcb_set_input_focus(
-                g_xcb,
-                XCB_INPUT_FOCUS_POINTER_ROOT,
-                f->window,
-                XCB_CURRENT_TIME);
-    }
-    xcb_flush(g_xcb);
-}
-
 void cleanup()
 {
     xcb_aux_sync(g_xcb);
@@ -575,7 +543,6 @@ void scan_monitors()
     focused_client = NULL;
     focused_monitor = primary_monitor;
 
-    check_focus_consistency();
     hints_set_monitor(focused_monitor);
     refresh_bar();
 
@@ -597,10 +564,12 @@ void usage()
     printf("Usage: mwm [OPTIONS]\n\n"\
            "-h, --help\t\tprint this message.\n"\
            "-v, --version\t\tprint the version.\n"\
-           "-b, --border-width\tset window border width (default 1).\n"
+           "-w, --border-width\tset window border width (default 1).\n"
            "-n, --normal-color\tset window border color (default grey).\n"
-           "-f, --focused-color\tset window border color when focused (default blue).\n"
-           "-u, --urgent-color\tset window border color when urgent (default red).\n");
+           "-c, --focused-color\tset window border color when focused (default blue).\n"
+           "-u, --urgent-color\tset window border color when urgent (default red).\n"
+           "-b, --bg-color\tset backgound color (default black).\n"
+           "-f, --fg-color\tset foreground  color (default white).\n");
     exit(2);
 }
 
@@ -699,21 +668,12 @@ void manage(xcb_window_t window)
     } else if ((c->state & STATE_STICKY) == STATE_STICKY) {
         monitor_attach(primary_monitor, c);
         monitor_render(primary_monitor, GS_UNCHANGED);
-        //hints_set_monitor(primary_monitor);
-        //refresh_bar();
     } else {
         monitor_attach(focused_monitor, c);
         monitor_render(focused_monitor, GS_UNCHANGED);
-        //hints_set_monitor(focused_monitor);
-        //refresh_bar();
     }
 
-    if ((c->state & STATE_ACCEPT_FOCUS) == STATE_ACCEPT_FOCUS)
-        xcb_set_input_focus(
-                g_xcb,
-                XCB_INPUT_FOCUS_POINTER_ROOT,
-                window,
-                XCB_CURRENT_TIME);
+    client_set_input_focus(c);
 
     xcb_change_property(
             g_xcb,
@@ -726,7 +686,7 @@ void manage(xcb_window_t window)
     xcb_aux_sync(g_xcb);
 }
 
-Client * lookup(xcb_window_t window)
+Client *lookup(xcb_window_t window)
 {
     if (window == g_root)
         return NULL;
@@ -753,16 +713,9 @@ void forget(xcb_window_t window)
         else
            f = client_previous(c, MODE_ANY, STATE_ACCEPT_FOCUS);
 
-        if (f)
-            xcb_set_input_focus(
-                    g_xcb,
-                    XCB_INPUT_FOCUS_POINTER_ROOT,
-                    f->window,
-                    XCB_CURRENT_TIME);
-        else
-            focused_client = NULL;
+        if (f) 
+            client_set_input_focus(f);
     }
-
     Monitor *m = c->monitor;
     monitor_detach(c->monitor, c);
     monitor_render(m, GS_UNCHANGED);
@@ -778,12 +731,23 @@ void forget(xcb_window_t window)
                     g_ewmh._NET_CLIENT_LIST,
                     XCB_ATOM_WINDOW, 32, 1, &it->window);
 
-    /* we did not flush yet for the consistency to be properly checked */
-    if (! focused_client)
-        check_focus_consistency();
     hints_set_monitor(focused_monitor);
     hints_set_focused(focused_client);
     refresh_bar();
+    xcb_flush(g_xcb);
+}
+
+void find_focus() {
+    Client *f = focused_monitor->head;
+    if (f) {
+        if ((f->state & STATE_ACCEPT_FOCUS) == STATE_ACCEPT_FOCUS) {
+            client_set_input_focus(f);
+        } else {
+            Client *nf = client_next(f, MODE_ANY, STATE_ACCEPT_FOCUS);
+            if (nf)
+                client_set_input_focus(nf);
+        }
+    }
     xcb_flush(g_xcb);
 }
 
@@ -791,14 +755,6 @@ void forget(xcb_window_t window)
  * it does not set the "X" input focus */
 void focus(Client *client)
 {
-    if (client == focused_client && client->monitor == focused_monitor)
-        return;
-
-    if (client == focused_client && client->monitor != focused_monitor) {
-        focused_monitor = client->monitor;
-        return;
-    }
-
     focused_client = client;
     focused_monitor = client->monitor;
     client_receive_focus(client);
@@ -823,14 +779,9 @@ void focus_next_client()
 
     Client *c = client_next(focused_client, MODE_ANY, STATE_ACCEPT_FOCUS);
     if (c) {
-        xcb_set_input_focus(
-                g_xcb,
-                XCB_INPUT_FOCUS_POINTER_ROOT,
-                c->window,
-                XCB_CURRENT_TIME);
+        client_set_input_focus(c);
 
     }
-    check_focus_consistency();
     xcb_flush(g_xcb);
 }
 
@@ -840,15 +791,8 @@ void focus_previous_client()
         return;
 
     Client *c = client_previous(focused_client, MODE_ANY, STATE_ACCEPT_FOCUS);
-    if (c) {
-        xcb_set_input_focus(
-                g_xcb,
-                XCB_INPUT_FOCUS_POINTER_ROOT,
-                c->window,
-                XCB_CURRENT_TIME);
-
-    }
-    check_focus_consistency();
+    if (c)
+        client_set_input_focus(c);
     xcb_flush(g_xcb);
 }
 
@@ -856,7 +800,6 @@ void focus_next_monitor()
 {
     if (focused_monitor->next) {
         focused_monitor = focused_monitor->next;
-        check_focus_consistency();
         hints_set_monitor(focused_monitor);
         hints_set_focused(focused_client);
         refresh_bar();
@@ -868,7 +811,6 @@ void focus_previous_monitor()
 {
     if (focused_monitor->prev) {
         focused_monitor = focused_monitor->prev;
-        check_focus_consistency();
         hints_set_monitor(focused_monitor);
         hints_set_focused(focused_client);
         refresh_bar();
@@ -882,7 +824,6 @@ void focus_clicked_monitor(int x, int y)
         if (x > m->geometry.x && x < m->geometry.x + m->geometry.width &&
                 y > m->geometry.y && y < m->geometry.y + m->geometry.height) {
             focused_monitor = m;
-            check_focus_consistency();
             hints_set_monitor(focused_monitor);
             hints_set_focused(focused_client);
             refresh_bar();
@@ -964,7 +905,6 @@ void focused_monitor_rotate_counter_clockwise()
 void focused_monitor_set_tag(int tag)
 {
     focused_monitor->tagset = (1L << (tag - 1));
-    check_focus_consistency();
     monitor_render(focused_monitor, GS_UNCHANGED);
     hints_set_monitor(focused_monitor);
     refresh_bar();
@@ -979,7 +919,6 @@ void focused_monitor_toggle_tag(int tag)
     else
         focused_monitor->tagset |= (1L << (tag - 1));
 
-    check_focus_consistency();
     monitor_render(focused_monitor, GS_UNCHANGED);
     hints_set_monitor(focused_monitor);
     refresh_bar();
@@ -1098,7 +1037,6 @@ void focused_client_to_next_monitor()
         monitor_detach(cm, c);
         monitor_attach(nm, c);
         focused_monitor = c->monitor;
-        check_focus_consistency();
         monitor_render(cm, GS_UNCHANGED);
         monitor_render(nm, GS_UNCHANGED);
         xcb_flush(g_xcb);
@@ -1117,7 +1055,6 @@ void focused_client_to_previous_monitor()
         monitor_detach(cm, c);
         monitor_attach(pm, c);
         focused_monitor = c->monitor;
-        check_focus_consistency();
         monitor_render(cm, GS_UNCHANGED);
         monitor_render(pm, GS_UNCHANGED);
         xcb_flush(g_xcb);
@@ -1174,7 +1111,6 @@ void focused_client_set_tag(int tag)
     focused_monitor->tags[tag - 1]++;
 
     monitor_render(focused_monitor, GS_UNCHANGED);
-    check_focus_consistency();
     hints_set_focused(focused_client);
     hints_set_monitor(focused_monitor);
     refresh_bar();
@@ -1201,7 +1137,6 @@ void focused_client_toggle_tag(int tag)
             focused_monitor->tagset & (1L << (tag - 1)))
         monitor_render(focused_monitor, GS_UNCHANGED);
 
-    check_focus_consistency();
     hints_set_focused(focused_client);
     hints_set_monitor(focused_monitor);
     refresh_bar();
@@ -1214,16 +1149,18 @@ int main(int argc, char **argv)
     static struct option long_options[] = {
         {"help", no_argument, 0, 'h'},
         {"version", no_argument, 0, 'v'},
-        {"border-width", required_argument, 0, 'b'},
+        {"border-width", required_argument, 0, 'w'},
         {"normal-color", required_argument, 0, 'n'},
-        {"focused-color", required_argument, 0, 'f'},
+        {"focused-color", required_argument, 0, 'c'},
         {"urgent-color", required_argument, 0, 'u'},
+        {"bg-color", required_argument, 0, 'b'},
+        {"fg-color", required_argument, 0, 'f'},
         {0, 0, 0, 0}};
     int option_index = 0, opt;
 
     setlocale(LC_ALL, "");
 
-    while ((opt = getopt_long(argc, argv, "hvb:n:f:u", long_options, &option_index)) != -1) {
+    while ((opt = getopt_long(argc, argv, "hvw:n:c:u:b:f:", long_options, &option_index)) != -1) {
         switch (opt) {
             case 'h':
                 usage();
@@ -1231,17 +1168,23 @@ int main(int argc, char **argv)
             case 'v':
                 version();
                 break;
-            case 'b':
+            case 'w':
                 g_border_width = atoi(optarg);
                 break;
             case 'n':
                 g_normal_color = parse_color(optarg);
                 break;
-            case 'f':
+            case 'c':
                 g_focused_color = parse_color(optarg);
                 break;
             case 'u':
                 g_urgent_color = parse_color(optarg);
+                break;
+            case 'b':
+                g_bgcolor = parse_color(optarg);
+                break;
+            case 'f':
+                g_fgcolor = parse_color(optarg);
                 break;
             default:
                 usage();
