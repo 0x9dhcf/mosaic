@@ -1,25 +1,3 @@
-/*
- * Copyright (c) 2019-2020 Pierre Evenou
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
-
 #include <unistd.h>
 
 #include <xcb/xcb.h>
@@ -50,7 +28,8 @@ static void on_button_press(xcb_button_press_event_t *e);
 static void on_key_press(xcb_key_press_event_t *e);
 static void spawn(char **argv);
 
-void on_configure_request(xcb_configure_request_event_t *e)
+void
+on_configure_request(xcb_configure_request_event_t *e)
 {
     Client *c = lookup(e->window);
 
@@ -113,19 +92,22 @@ void on_configure_request(xcb_configure_request_event_t *e)
     xcb_aux_sync(g_xcb);
 }
 
-void on_expose(xcb_expose_event_t *e)
+void
+on_expose(xcb_expose_event_t *e)
 {
-    if (e->window == g_bar.window)
-        refresh_bar();
+    if (bar_is_window(e->window))
+        refresh_wmstatus();
 }
 
-void on_configure_notify(xcb_configure_notify_event_t *e)
+void
+on_configure_notify(xcb_configure_notify_event_t *e)
 {
     if (e->window == g_root)
         scan_monitors();
 }
 
-void on_map_request(xcb_map_request_event_t *e)
+void
+on_map_request(xcb_map_request_event_t *e)
 {
     if (lookup(e->window))
         return;
@@ -149,18 +131,28 @@ static void on_mapping_notify(xcb_mapping_notify_event_t *e)
 }
 */
 
-void on_unmap_notify(xcb_unmap_notify_event_t *e)
+void
+on_unmap_notify(xcb_unmap_notify_event_t *e)
 {
     forget(e->window);
 }
 
-void on_property_notify(xcb_property_notify_event_t *e)
+void
+on_property_notify(xcb_property_notify_event_t *e)
 {
     int refresh = 0;
 
     if (e->state == XCB_PROPERTY_DELETE)
         return;
 
+    /* root window */
+    if (e->window == g_root && (e->atom == XCB_ATOM_WM_NAME)) {
+        bar_display_systatus();
+        xcb_flush(g_xcb);
+        return;
+    }
+
+    /* client window */
     Client *client = lookup(e->window);
 
     if (! client)
@@ -190,7 +182,8 @@ void on_property_notify(xcb_property_notify_event_t *e)
     }
 }
 
-void on_focus_in(xcb_focus_in_event_t *e)
+void
+on_focus_in(xcb_focus_in_event_t *e)
 {
     /* ignore focus changes due to keyboard grabs */
     if (e->mode == XCB_NOTIFY_MODE_GRAB || e->mode == XCB_NOTIFY_MODE_UNGRAB)
@@ -201,7 +194,7 @@ void on_focus_in(xcb_focus_in_event_t *e)
 
     if (e->event == g_root) {
         find_focus(0);
-        refresh_bar();
+        refresh_wmstatus();
         xcb_flush(g_xcb);
         return;
     }
@@ -229,7 +222,8 @@ void on_focus_in(xcb_focus_in_event_t *e)
     xcb_flush(g_xcb);
 }
 
-void on_focus_out(xcb_focus_out_event_t *e)
+void
+on_focus_out(xcb_focus_out_event_t *e)
 {
     if (e->mode == XCB_NOTIFY_MODE_GRAB || e->mode == XCB_NOTIFY_MODE_UNGRAB)
       return;
@@ -242,7 +236,8 @@ void on_focus_out(xcb_focus_out_event_t *e)
         unfocus(c);
 }
 
-void on_enter_notify(xcb_enter_notify_event_t *e)
+void
+on_enter_notify(xcb_enter_notify_event_t *e)
 {
     if(e->mode != XCB_NOTIFY_MODE_NORMAL || e->event == g_root)
         return;
@@ -252,7 +247,8 @@ void on_enter_notify(xcb_enter_notify_event_t *e)
     xcb_flush(g_xcb);
 }
 
-void on_client_message(xcb_client_message_event_t *e)
+void
+on_client_message(xcb_client_message_event_t *e)
 {
     /* TODO: STICKY */
     int refresh = 0;
@@ -326,14 +322,15 @@ void on_client_message(xcb_client_message_event_t *e)
     xcb_flush(g_xcb);
 }
 
-void on_button_press(xcb_button_press_event_t *e)
+void
+on_button_press(xcb_button_press_event_t *e)
 {
     if(e->event == g_root) {
         focus_clicked_monitor(e->root_x, e->root_y);
         return;
     }
 
-    if (e->event == g_bar.window) {
+    if (bar_is_window(e->event)) {
         if (fork() == 0) {
             int pid = fork();
             if (pid == 0) {
@@ -365,7 +362,8 @@ void on_button_press(xcb_button_press_event_t *e)
 }
 
 /* TODO
-static void on_keyboard_state_change(xcb_xkb_state_notify_event_t *e)
+void
+on_keyboard_state_change(xcb_xkb_state_notify_event_t *e)
 {
      * Just keep track of modifiers for now.
      * keyboard or keymap changes etc.. see i3 or i3lock
@@ -380,7 +378,8 @@ static void on_keyboard_state_change(xcb_xkb_state_notify_event_t *e)
 }
 */
 
-void on_key_press(xcb_key_press_event_t *e)
+void
+on_key_press(xcb_key_press_event_t *e)
 {
     xkb_keycode_t keycode = e->detail;
     xkb_keysym_t keysym = xkb_state_key_get_one_sym(g_xkb_state, keycode);
@@ -415,7 +414,8 @@ void on_key_press(xcb_key_press_event_t *e)
     }
 }
 
-void spawn(char **argv)
+void
+spawn(char **argv)
 {
     if (fork() == 0) {
         int pid = fork();
@@ -432,7 +432,8 @@ void spawn(char **argv)
     }
 }
 
-void on_event(xcb_generic_event_t *event)
+void
+on_event(xcb_generic_event_t *event)
 {
     switch(event->response_type & ~0x80) {
         case XCB_EXPOSE:

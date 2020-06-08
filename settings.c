@@ -1,25 +1,3 @@
-/*
- * Copyright (c) 2019 Pierre Evenou
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
-
 #include "settings.h"
 #include "mosaic.h"
 
@@ -31,14 +9,20 @@
 #define K_MCS       MODKEY | XCB_MOD_MASK_CONTROL | XCB_MOD_MASK_SHIFT
 
 /* static "extern" configuration */
-unsigned int    g_border_width      = 1;
-unsigned int    g_normal_color      = 0x888888;
-unsigned int    g_focused_color     = 0x0000ff;
-unsigned int    g_urgent_color      = 0xff0000;
-unsigned int    g_bgcolor           = 0x000000;
-unsigned int    g_fgcolor           = 0xffffff;
-double          g_split             = .6f;
-char            g_font[256]         = "-*-terminus-medium-r-normal-*-14-*-*-*-*-*-*-*";
+unsigned int    g_border_width              = 1;
+unsigned int    g_normal_color              = 0x888888;
+unsigned int    g_focused_color             = 0x0000ff;
+unsigned int    g_urgent_color              = 0xff0000;
+unsigned int    g_fade_color                = 0x666666;
+unsigned int    g_bgcolor                   = 0x000000;
+unsigned int    g_fgcolor                   = 0xffffff;
+unsigned int    g_bar_bgcolor               = 0x000000;
+unsigned int    g_bar_fgcolor               = 0xffffff;
+unsigned int    g_bar_selected_tag_fgcolor  = 0x000000;
+unsigned int    g_bar_selected_tag_bgcolor  = 0xffffff;
+double          g_split                     = .6f;
+char            g_font[]                    = "-*-terminus-medium-*-*-*-12-*-*-*-*-*-*-*";
+unsigned int    g_bar_height                = 24;
 
 Rule g_rules[] = {
     /* class                instance            TAGSET      State */
@@ -127,13 +111,20 @@ Shortcut g_shortcuts[] = {
     {{ 0, 0 }, 0, {NULL}, {0}}
 };
 
+#define DMENU_OPTS \
+"-p", "search: ",\
+"-h", "24",\
+"-fn", "Sans:size=10",\
+"-nf", "#eceff4", "-nb", "#2e3440",\
+"-sb", "#5e81ac", "-sf", "#2e3440"
+
 Binding g_bindings[] = {
     /* modifier key                                 arguments      */
-    { {K_M,     XKB_KEY_Return },                   {"uxterm"} },
-    { {K_MS,    XKB_KEY_Return },                   {"uxterm", "-e", "ranger" } },
-    { {K_M,     XKB_KEY_d },                        {"dmenu_run", "-b", "-fn", "Noto Sans:size=12", "-nb", "#1d2021", "-nf", "#888888", "-sb", "#1d2021", "-sf", "#eeeeec"} },
-    { {0,       XKB_KEY_XF86AudioRaiseVolume },     {"pactl", "set-sink-volume", "0", "+5%"} },
-    { {0,       XKB_KEY_XF86AudioLowerVolume },     {"pactl", "set-sink-volume", "0", "-5%"} },
+    { {K_M,     XKB_KEY_Return },                   {"urxvt"} },
+    { {K_M,     XKB_KEY_d },                        {"dmenu_run", DMENU_OPTS} },
+    { {0,       XKB_KEY_XF86AudioRaiseVolume },     {"mixer", "vol", "+5%"} },
+    { {0,       XKB_KEY_XF86AudioLowerVolume },     {"mixer", "vol", "-5%"} },
+    /*
     { {0,       XKB_KEY_XF86AudioMute },            {"pactl", "set-sink-mute", "0", "toggle"} },
     { {0,       XKB_KEY_XF86AudioMicMute },         {"pactl", "set-source-mute", "1", "toggle"} },
     { {K_M,     XKB_KEY_XF86AudioMute },            {"pavucontrol"} },
@@ -141,6 +132,7 @@ Binding g_bindings[] = {
     { {0,       XKB_KEY_XF86MonBrightnessDown },    {"xbacklight", "-", "5" } },
     { {0,       XKB_KEY_XF86Display },              {"xrandr", "--output", "HDMI1", "--auto", "--right-of", "eDP1"} },
     { {K_M,     XKB_KEY_XF86Display },              {"xrandr", "--output", "HDMI1", "--off" } },
+    */
     { { 0, 0 }, {NULL} }
 };
 
