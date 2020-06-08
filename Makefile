@@ -1,32 +1,13 @@
-# minimal widow manager
-# Copyright (c) 2019 Pierre Evenou
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-
 .POSIX:
 
-MAJOR = 3
-MINOR = 1
-PATCH = 3
+TARGET	= mosaic
+MAJOR 	= 5
+MINOR 	= 0
+PATCH 	= 0
+VERSION = ${MAJOR}.${MINOR}.${PATCH}
 
-# paths
-PREFIX ?= /usr/local
+PREFIX = /usr/local
+
 PKG_CONFIG = pkg-config
 
 DEPS = xcb\
@@ -39,45 +20,57 @@ DEPS = xcb\
        xcb-icccm\
        xcb-ewmh\
 
-INCS = `$(PKG_CONFIG) --cflags $(DEPS)`
-LIBS = `$(PKG_CONFIG) --libs $(DEPS)`
+SRC = bar.c\
+      client.c\
+      events.c\
+      hints.c\
+      mosaic.c\
+      monitor.c\
+      settings.c\
+      x11.c
 
-# flags
-NDEBUG ?= 0
-ifeq ($(NDEBUG), 1)
-    CFLAGS += -O2
-    CPPFLAGS += -DNDEBUG
-else
-    CFLAGS += -g -Wno-unused-parameter
-endif
-CPPFLAGS += -DVERSION=\"$(MAJOR).$(MINOR).$(PATCH)\"
-CFLAGS += $(INCS) $(CPPFLAGS)
-LDFLAGS += $(LIBS)
+INC = `$(PKG_CONFIG) --cflags $(DEPS)`
+LIB = `$(PKG_CONFIG) --libs $(DEPS)` 
+OBJ = ${SRC:.c=.o}
 
-SRC = $(wildcard *.c)
-HDR = $(wildcard *.h)
-OBJ = $(SRC:.c=.o)
+CPPFLAGS 	= -DVERSION=\"${VERSION}\"
+CFLAGS 		= -Wall -Wextra $(INC)
+LDFLAGS 	= $(LIB)
 
-all: mosaic
+.ifdef NDEBUG
+CFLAGS 	+= -O2 -DNDEBUG
+.else
+CFLAGS 	+= -g -O0
+.endif
+
+all: options ${TARGET}
+
+options:
+	@echo build options: 
+	@echo "CPPLAGS  = ${CPPFLAGS}"
+	@echo "CFLAGS   = ${CFLAGS}"
+	@echo "LDFLAGS  = ${LDFLAGS}"
 
 .c.o:
-	$(CC) $(CFLAGS) -c $<
+	${CC} -c ${CPPFLAGS} ${CFLAGS} $<
 
-$(OBJ): $(HDR)
-
-mosaic: $(OBJ)
-	$(CC) -o $@ $(OBJ) $(LDFLAGS)
+${TARGET}: ${OBJ}
+	${CC} -o $@ ${OBJ} ${LDFLAGS}
 
 clean:
-	rm -f mosaic $(OBJ)
+	rm -f ${TARGET} ${OBJ}
 
-install: mosaic
+dist: clean
+	mkdir -p ${TARGET}-${VERSION}
+	cp -R Makefile LICENCE README ${TARGET}.1 
+	tar -zcf ${TARGET}-${VERSION}.tar.gz ${TARGET}-${VERSION}
+	rm -rf ${TARGET}-${VERSION}
+
+install: all
 	mkdir -p $(PREFIX)/bin
-	cp -f mosaic $(PREFIX)/bin
-	cp -f mosaic-session $(PREFIX)/bin
+	cp -f ${TARGET} $(PREFIX)/bin
 
 uninstall:
-	rm -f $(PREFIX)/bin/mosaic
-	rm -f $(PREFIX)/bin/mosaic-session
+	rm -f $(PREFIX)/bin/${TARGET}
 
-.PHONY: all clean install uninstall
+.PHONY: all options clean dist install uninstall

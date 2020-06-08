@@ -1,37 +1,15 @@
-/*
- * Copyright (c) 2019 Pierre Evenou
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
 
 #include "bar.h"
-#include "client.h"
 #include "hints.h"
 #include "log.h"
 #include "monitor.h"
 #include "mosaic.h"
 #include "settings.h"
+#include "client.h"
 
 #define DEFAULT_LAYOUT LT_RIGHT
 #define DEFAULT_MAINS 1
@@ -69,7 +47,8 @@ static void apply_top_layout(
         int mains, int stacked,
         int w_x, int w_y, int w_w, int w_h);
 
-void apply_none_layout(Monitor *m, int w_x, int w_y, int w_w, int w_h)
+void
+apply_none_layout(Monitor *m, int w_x, int w_y, int w_w, int w_h)
 {
     Client *c;
     for (c = m->head; c; c = c->next)
@@ -77,7 +56,8 @@ void apply_none_layout(Monitor *m, int w_x, int w_y, int w_w, int w_h)
             client_set_tiling(c, &(Rectangle) { w_x, w_y, w_w, w_h });
 }
 
-void horizontal_layout(
+void
+horizontal_layout(
         Monitor *m,
         int mains, int stacked,
         int main_x, int main_y, int main_w, int main_h,
@@ -107,7 +87,8 @@ void horizontal_layout(
     }
 }
 
-void apply_right_layout(
+void
+apply_right_layout(
         Monitor *m,
         int mains, int stacked,
         int w_x, int w_y, int w_w, int w_h)
@@ -132,7 +113,8 @@ void apply_right_layout(
             stack_x, stack_y, stack_w, stack_h, stack_r);
 }
 
-void apply_left_layout(
+void
+apply_left_layout(
         Monitor *m,
         int mains, int stacked,
         int w_x, int w_y, int w_w, int w_h)
@@ -157,7 +139,8 @@ void apply_left_layout(
             stack_x, stack_y, stack_w, stack_h, stack_r);
 }
 
-void vertical_layout(
+void
+vertical_layout(
         Monitor *m,
         int mains, int stacked,
         int main_x, int main_y, int main_w, int main_h,
@@ -187,7 +170,8 @@ void vertical_layout(
     }
 }
 
-void apply_bottom_layout(
+void
+apply_bottom_layout(
         Monitor *m,
         int mains, int stacked,
         int w_x, int w_y, int w_w, int w_h)
@@ -212,7 +196,8 @@ void apply_bottom_layout(
             stack_x, stack_y, stack_w, stack_h, stack_r);
 }
 
-void apply_top_layout(
+void
+apply_top_layout(
         Monitor *m,
         int mains, int stacked,
         int w_x, int w_y, int w_w, int w_h)
@@ -237,7 +222,8 @@ void apply_top_layout(
             stack_x, stack_y, stack_w, stack_h, stack_r);
 }
 
-void monitor_initialize(Monitor *monitor, const char *name, int x, int y, int width, int height)
+void
+monitor_initialize(Monitor *monitor, const char *name, int x, int y, int width, int height)
 {
     strncpy(monitor->name, name, 127);
     monitor->geometry = (Rectangle) { x, y, width, height };
@@ -252,7 +238,8 @@ void monitor_initialize(Monitor *monitor, const char *name, int x, int y, int wi
     monitor->prev = NULL;
 }
 
-void monitor_attach(Monitor *monitor, Client *client)
+void
+monitor_attach(Monitor *monitor, Client *client)
 {
     client->monitor = monitor;
     if (client->tagset < 0)
@@ -282,7 +269,8 @@ void monitor_attach(Monitor *monitor, Client *client)
         client->floating_geometry.height / 2;
 }
 
-void monitor_detach(Monitor *monitor, Client *client)
+void
+monitor_detach(Monitor *monitor, Client *client)
 {
     if (client->monitor != monitor)
         return;
@@ -306,7 +294,8 @@ void monitor_detach(Monitor *monitor, Client *client)
     client->next = NULL;
 }
 
-void monitor_update_main_views(Monitor *monitor, int by)
+void
+monitor_update_main_views(Monitor *monitor, int by)
 {
     if (by > 0) {
 
@@ -327,14 +316,15 @@ void monitor_update_main_views(Monitor *monitor, int by)
     }
 }
 
-void monitor_render(Monitor *monitor, GeometryStatus status)
+void
+monitor_render(Monitor *monitor, GeometryStatus status)
 {
     int tilables = 0;
     int fullscreen = 0;
     int rr = 0, rl = 0, rt = 0, rb = 0, wx = 0, wy = 0, ww = 0, wh = 0;
 
-    if (g_bar.monitor == monitor && g_bar.opened)
-        rt = BAR_HEIGHT;
+    if (bar_is_monitor(monitor) && bar_is_opened())
+        rt = g_bar_height;
 
     /* first round to get information about clients. */
     for (Client *c = monitor->head; c; c = c->next) {
@@ -427,5 +417,4 @@ void monitor_render(Monitor *monitor, GeometryStatus status)
         }
     }
 }
-
 

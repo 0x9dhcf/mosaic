@@ -1,25 +1,3 @@
-/*
- * Copyright (c) 2019-2020 Pierre Evenou
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
-
 #include <stdlib.h>
 #include <string.h>
 
@@ -28,10 +6,12 @@
 #include "log.h"
 #include "monitor.h"
 #include "settings.h"
+#include "x11.h"
 
 static int xcb_reply_contains_atom(xcb_get_property_reply_t *reply, xcb_atom_t atom);
 
-int xcb_reply_contains_atom(xcb_get_property_reply_t *reply, xcb_atom_t atom)
+int
+xcb_reply_contains_atom(xcb_get_property_reply_t *reply, xcb_atom_t atom)
 {
     if (reply == NULL || xcb_get_property_value_length(reply) == 0)
         return 0;
@@ -47,7 +27,8 @@ int xcb_reply_contains_atom(xcb_get_property_reply_t *reply, xcb_atom_t atom)
     return 0;
 }
 
-void client_initialize(Client *c, xcb_window_t w)
+void
+client_initialize(Client *c, xcb_window_t w)
 {
     c->window = w;
     c->tiling_geometry = (Rectangle) {0};
@@ -174,7 +155,8 @@ void client_initialize(Client *c, xcb_window_t w)
     client_apply_size_hints(c);
 }
 
-void client_set_floating(Client *c, Rectangle *r)
+void
+client_set_floating(Client *c, Rectangle *r)
 {
     c->floating_geometry = *r;
     c->floating_geometry.width -= 2 * c->border_width;
@@ -182,26 +164,30 @@ void client_set_floating(Client *c, Rectangle *r)
     client_apply_size_hints(c);
 }
 
-void client_set_tiling(Client *c, Rectangle *r)
+void
+client_set_tiling(Client *c, Rectangle *r)
 {
     c->tiling_geometry = *r;
     c->tiling_geometry.width -= 2 * c->border_width;
     c->tiling_geometry.height -= 2 * c->border_width;
 }
 
-void client_set_mode(Client *c, Mode m)
+void
+client_set_mode(Client *c, Mode m)
 {
     c->saved_mode = c->mode;
     c->mode = m;
 }
 
-void client_set_tagset(Client *c, int tagset)
+void
+client_set_tagset(Client *c, int tagset)
 {
     c->saved_tagset = c->tagset;
     c->tagset = tagset;
 }
 
-void client_set_sticky(Client *c, int sticky)
+void
+client_set_sticky(Client *c, int sticky)
 {
     if (sticky) {
         c->state |= STATE_STICKY;
@@ -214,7 +200,8 @@ void client_set_sticky(Client *c, int sticky)
     }
 }
 
-void client_set_fullscreen(Client *c, int fullscreen)
+void
+client_set_fullscreen(Client *c, int fullscreen)
 {
     if (fullscreen && c->mode != MODE_FULLSCREEN) {
         c->border_width = 0;
@@ -230,7 +217,8 @@ void client_set_fullscreen(Client *c, int fullscreen)
     }
 }
 
-void client_set_urgent(Client *c, int urgency)
+void
+client_set_urgent(Client *c, int urgency)
 {
     if (urgency)
         c->state |= STATE_URGENT;
@@ -245,7 +233,8 @@ void client_set_urgent(Client *c, int urgency)
             { urgency ?  g_urgent_color : g_normal_color });
 }
 
-void client_set_input_focus(Client *c)
+void
+client_set_input_focus(Client *c)
 {
     if (c && (c->state & STATE_ACCEPT_FOCUS) == STATE_ACCEPT_FOCUS)
         xcb_set_input_focus(
@@ -255,7 +244,8 @@ void client_set_input_focus(Client *c)
                 XCB_CURRENT_TIME);
 }
 
-void client_receive_focus(Client *c)
+void
+client_receive_focus(Client *c)
 {
     xcb_change_window_attributes(
             g_xcb,
@@ -271,7 +261,8 @@ void client_receive_focus(Client *c)
                 (const unsigned int[]) { XCB_STACK_MODE_ABOVE });
 }
 
-void client_loose_focus(Client *c)
+void
+client_loose_focus(Client *c)
 {
     xcb_change_window_attributes(
             g_xcb,
@@ -280,7 +271,8 @@ void client_loose_focus(Client *c)
             (unsigned int []) { g_normal_color });
 }
 
-void client_hide(Client *c)
+void
+client_hide(Client *c)
 {
     Rectangle g = c->mode == MODE_TILED ?
         c->tiling_geometry : c->floating_geometry;
@@ -312,7 +304,8 @@ void client_hide(Client *c)
     xcb_ungrab_pointer(g_xcb, XCB_CURRENT_TIME);
 }
 
-void client_show(Client *c)
+void
+client_show(Client *c)
 {
     Rectangle g = c->mode == MODE_TILED ?
         c->tiling_geometry : c->floating_geometry;
@@ -363,12 +356,14 @@ void client_show(Client *c)
     xcb_ungrab_pointer(g_xcb, XCB_CURRENT_TIME);
 }
 
-int client_is_visible(Client *c)
+int
+client_is_visible(Client *c)
 {
     return (! c->tagset) || (c->tagset & c->monitor->tagset);
 }
 
-void client_notify(Client *c)
+void
+client_notify(Client *c)
 {
     xcb_configure_notify_event_t event;
     event.event = c->window;
@@ -396,7 +391,8 @@ void client_notify(Client *c)
             (char*)&event);
 }
 
-void client_apply_size_hints(Client *c)
+void
+client_apply_size_hints(Client *c)
 {
     if (c->mode == MODE_FULLSCREEN)
         return;
@@ -447,7 +443,8 @@ void client_apply_size_hints(Client *c)
     }
 }
 
-int client_update_strut(Client *c)
+int
+client_update_strut(Client *c)
 {
     c->strut = (Strut){0};
 
@@ -467,7 +464,8 @@ int client_update_strut(Client *c)
 }
 
 /* TODO update user size (XCB_ICCCM_SIZE_HINT_US_POSITION etc.) */
-int client_update_size_hints(Client *c)
+int
+client_update_size_hints(Client *c)
 {
     int refresh = 0;
     xcb_get_property_reply_t *normal_hints = xcb_get_property_reply(
@@ -556,7 +554,8 @@ int client_update_size_hints(Client *c)
     return refresh;
 }
 
-int client_update_wm_hints(Client *c)
+int
+client_update_wm_hints(Client *c)
 {
     int refresh = 0;
 
@@ -592,7 +591,8 @@ int client_update_wm_hints(Client *c)
     return refresh;
 }
 
-int client_update_window_type(Client *c)
+int
+client_update_window_type(Client *c)
 {
     int refresh = 0;
     xcb_get_property_reply_t *type = xcb_get_property_reply(
@@ -634,7 +634,8 @@ int client_update_window_type(Client *c)
 #define CLIENT_MATCH_MODE_AND_STATE(c, m, s)\
         ((m == MODE_ANY || c->mode == m) && (c->state & s) ==  s && client_is_visible(c))
 
-Client *client_next(Client *c, Mode mode, State state)
+Client *
+client_next(Client *c, Mode mode, State state)
 {
     /* find the first successor matching */
     for (Client *ic = c->next; ic; ic = ic->next)
@@ -643,13 +644,14 @@ Client *client_next(Client *c, Mode mode, State state)
 
     /* if not found then find the first one matching from the head */
     for (Client *ic = c->monitor->head; ic && ic != c; ic = ic->next)
-        if (CLIENT_MATCH_MODE_AND_STATE(c, mode, state))
+        if (CLIENT_MATCH_MODE_AND_STATE(ic, mode, state))
             return ic;
 
     return NULL;
 }
 
-Client *client_previous(Client *c, Mode mode, State state)
+Client *
+client_previous(Client *c, Mode mode, State state)
 {
     /* find the first ancestor matching */
     for (Client *ic = c->prev; ic; ic = ic->prev)

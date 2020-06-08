@@ -1,25 +1,4 @@
-/*
- * Copyright (c) 2019, 2020 Pierre Evenou
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
-
+#include <poll.h>
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
@@ -33,13 +12,13 @@
 
 #include "mosaic.h"
 #include "log.h"
-#include "x11.h"
 #include "monitor.h"
 #include "client.h"
 #include "hints.h"
 #include "events.h"
 #include "settings.h"
 #include "bar.h"
+#include "x11.h"
 
 /* static functions */
 static void setup();
@@ -69,7 +48,8 @@ static xcb_atom_t wm_delete_window_atom;
 
 static int running;
 
-void setup()
+void
+setup()
 {
     /* connect to x11 */
     x11_setup();
@@ -261,7 +241,7 @@ void setup()
         xcb_keycode_t *kc;
 
         kcs = xcb_key_symbols_get_keycode(ks, g_shortcuts[i].sequence.keysym);
-        for (kc = kcs; *kc != XCB_NO_SYMBOL; kc++)
+        for (kc = kcs; kc && *kc != XCB_NO_SYMBOL; kc++)
             xcb_grab_key(
                     g_xcb,
                     1,
@@ -278,7 +258,7 @@ void setup()
         xcb_keycode_t *kcs;
         xcb_keycode_t *kc;
         kcs = xcb_key_symbols_get_keycode(ks, g_bindings[i].sequence.keysym);
-        for (kc = kcs; *kc != XCB_NO_SYMBOL; kc++)
+        for (kc = kcs; kc && *kc != XCB_NO_SYMBOL; kc++)
             xcb_grab_key(
                     g_xcb,
                     1,
@@ -293,7 +273,8 @@ void setup()
     xcb_key_symbols_free(ks);
 }
 
-void add_monitor(Monitor *monitor)
+void
+add_monitor(Monitor *monitor)
 {
     if (monitor_tail) {
         monitor->prev = monitor_tail;
@@ -306,7 +287,8 @@ void add_monitor(Monitor *monitor)
     monitor_tail = monitor;
 }
 
-void del_monitor(Monitor *monitor)
+void
+del_monitor(Monitor *monitor)
 {
     if (monitor->prev)
         monitor->prev->next = monitor->next;
@@ -319,7 +301,8 @@ void del_monitor(Monitor *monitor)
         monitor_tail = monitor->prev;
 }
 
-void cleanup()
+void
+cleanup()
 {
     xcb_aux_sync(g_xcb);
     xcb_grab_server(g_xcb);
@@ -350,7 +333,8 @@ void cleanup()
     x11_cleanup();
 }
 
-static void update_monitors(Monitor *scanned)
+void
+update_monitors(Monitor *scanned)
 {
     for (Monitor *ms = scanned; ms; ms = ms->next)
         for (Monitor *me = monitor_head; me; me = me->next)
@@ -358,7 +342,8 @@ static void update_monitors(Monitor *scanned)
                 me = ms;
 }
 
-static void add_new_monitors(Monitor *scanned)
+void
+add_new_monitors(Monitor *scanned)
 {
     for (Monitor *ms = scanned; ms; ms = ms->next) {
 
@@ -394,7 +379,8 @@ static void add_new_monitors(Monitor *scanned)
     }
 }
 
-static void del_old_monitors(Monitor *scanned)
+void
+del_old_monitors(Monitor *scanned)
 {
     Monitor *m, *n;
     m = monitor_head;
@@ -437,7 +423,8 @@ static void del_old_monitors(Monitor *scanned)
     }
 }
 
-void scan_monitors()
+void
+scan_monitors()
 {
     Monitor *scanned = NULL;
 
@@ -544,7 +531,7 @@ void scan_monitors()
     focused_monitor = primary_monitor;
 
     hints_set_monitor(focused_monitor);
-    refresh_bar();
+    refresh_wmstatus();
 
     /* render the monitors with updated geometry */
     for (Monitor *m = monitor_head; m; m = m->next)
@@ -553,33 +540,38 @@ void scan_monitors()
     xcb_flush(g_xcb);
 }
 
-void trap(int sig)
+void
+trap(int sig)
 {
+    (void)sig;
     quit();
 }
 
-void usage()
+void
+usage()
 {
     printf("minimal window manager %s\n", VERSION);
-    printf("Usage: mwm [OPTIONS]\n\n"\
-           "-h, --help\t\tprint this message.\n"\
-           "-v, --version\t\tprint the version.\n"\
-           "-w, --border-width\tset window border width (default 1).\n"
-           "-n, --normal-color\tset window border color (default grey).\n"
-           "-c, --focused-color\tset window border color when focused (default blue).\n"
-           "-u, --urgent-color\tset window border color when urgent (default red).\n"
-           "-b, --bg-color\tset backgound color (default black).\n"
-           "-f, --fg-color\tset foreground  color (default white).\n");
+    printf("Usage: mosaic [OPTIONS]\n\n"\
+           "--help\t\tprint this message.\n"\
+           "--version\t\tprint the version.\n"\
+           "--border-width\tset window border width (default 1).\n"
+           "--normal-color\tset window border color (default grey).\n"
+           "--focused-color\tset window border color when focused (default blue).\n"
+           "--urgent-color\tset window border color when urgent (default red).\n"
+           "--bg-color\tset backgound color (default black).\n"
+           "--fg-color\tset foreground  color (default white).\n");
     exit(2);
 }
 
-void version()
+void
+version()
 {
     printf("%s\n", VERSION);
     exit(EXIT_SUCCESS);
 }
 
-unsigned int parse_color(const char* hex)
+unsigned int
+parse_color(const char* hex)
 {
     if (hex[0] != '#' || strlen(hex) != 7) {
         INFO("wrong color format: %s", hex);
@@ -588,7 +580,8 @@ unsigned int parse_color(const char* hex)
     return (unsigned int)strtoul(hex+1, NULL, 16);
 }
 
-void quit()
+void
+quit()
 {
     running = 0;
     /* send the focus to the root window to trigger the loop event */
@@ -601,9 +594,10 @@ void quit()
     xcb_flush(g_xcb);
 }
 
-void dump()
+void
+dump()
 {
-    FILE *f = fopen("/tmp/mwm.dump", "w");
+    FILE *f = fopen("/tmp/mosaic.dump", "w");
     if (!f)
         return;
 
@@ -629,29 +623,32 @@ void dump()
     fclose(f);
 }
 
-void toggle_bar()
+void
+toggle_bar()
 {
-    if (g_bar.opened) {
+    if (bar_is_opened()) {
         bar_hide();
     } else {
         bar_show();
-        refresh_bar();
+        refresh_wmstatus();
     }
     monitor_render(primary_monitor, GS_UNCHANGED);
     xcb_flush(g_xcb);
 }
 
-void refresh_bar()
+void
+refresh_wmstatus()
 {
-    if (! g_bar.opened)
+    if (! bar_is_opened())
         return;
 
     char *cname = focused_client ? focused_client->instance : "None";
     int ctagset = focused_client ? focused_client->tagset : 0x0;
-    bar_display(focused_monitor->tags, focused_monitor->tagset, cname, ctagset);
+    bar_display_wmstatus(focused_monitor->tags, focused_monitor->tagset, cname, ctagset);
 }
 
-void manage(xcb_window_t window)
+void
+manage(xcb_window_t window)
 {
     /* create the client */
     Client *c = malloc(sizeof(Client));
@@ -686,7 +683,8 @@ void manage(xcb_window_t window)
     xcb_aux_sync(g_xcb);
 }
 
-Client *lookup(xcb_window_t window)
+Client *
+lookup(xcb_window_t window)
 {
     if (window == g_root)
         return NULL;
@@ -699,7 +697,8 @@ Client *lookup(xcb_window_t window)
     return NULL;
 }
 
-void forget(xcb_window_t window)
+void
+forget(xcb_window_t window)
 {
     Client *c = lookup(window);
 
@@ -733,11 +732,12 @@ void forget(xcb_window_t window)
 
     hints_set_monitor(focused_monitor);
     hints_set_focused(focused_client);
-    refresh_bar();
+    refresh_wmstatus();
     xcb_flush(g_xcb);
 }
 
-void find_focus(int fallback) {
+void
+find_focus(int fallback) {
     int found = 0;
     focused_client = NULL;
     Client *f = focused_monitor->head;
@@ -761,32 +761,35 @@ void find_focus(int fallback) {
                 XCB_CURRENT_TIME);
     }
 
-    //refresh_bar();
+    //refresh_wmstatus();
     xcb_flush(g_xcb);
 }
 
 /* to be called only by focus_in event ???
  * it does not set the "X" input focus */
-void focus(Client *client)
+void
+focus(Client *client)
 {
     focused_client = client;
     focused_monitor = client->monitor;
     client_receive_focus(client);
     hints_set_focused(focused_client);
     hints_set_monitor(focused_monitor);
-    refresh_bar();
+    refresh_wmstatus();
     xcb_flush(g_xcb);
 }
 
-void unfocus(Client *client) {
+void
+unfocus(Client *client) {
     focused_client = NULL;
     client_loose_focus(client);
     hints_set_focused(focused_client);
-    refresh_bar();
+    refresh_wmstatus();
     xcb_flush(g_xcb);
 }
 
-void focus_next_client()
+void
+focus_next_client()
 {
     if (! focused_client)
         return;
@@ -797,7 +800,8 @@ void focus_next_client()
     xcb_flush(g_xcb);
 }
 
-void focus_previous_client()
+void
+focus_previous_client()
 {
     if (! focused_client)
         return;
@@ -808,29 +812,32 @@ void focus_previous_client()
     xcb_flush(g_xcb);
 }
 
-void focus_next_monitor()
+void
+focus_next_monitor()
 {
     if (focused_monitor->next) {
         focused_monitor = focused_monitor->next;
         hints_set_monitor(focused_monitor);
         hints_set_focused(focused_client);
-        refresh_bar();
+        refresh_wmstatus();
         xcb_flush(g_xcb);
     }
 }
 
-void focus_previous_monitor()
+void
+focus_previous_monitor()
 {
     if (focused_monitor->prev) {
         focused_monitor = focused_monitor->prev;
         hints_set_monitor(focused_monitor);
         hints_set_focused(focused_client);
-        refresh_bar();
+        refresh_wmstatus();
         xcb_flush(g_xcb);
     }
 }
 
-void focus_clicked_monitor(int x, int y)
+void
+focus_clicked_monitor(int x, int y)
 {
     for (Monitor *m = monitor_head; m; m = m->next) {
         if (x > m->geometry.x && x < m->geometry.x + m->geometry.width &&
@@ -838,21 +845,22 @@ void focus_clicked_monitor(int x, int y)
             focused_monitor = m;
             hints_set_monitor(focused_monitor);
             hints_set_focused(focused_client);
-            refresh_bar();
+            refresh_wmstatus();
             return;
         }
     }
 }
 
-
-void focused_monitor_update_main_views(int by)
+void
+focused_monitor_update_main_views(int by)
 {
     monitor_update_main_views(focused_monitor, by);
     monitor_render(focused_monitor, GS_UNCHANGED);
     xcb_flush(g_xcb);
 }
 
-void focused_monitor_set_layout(Layout layout)
+void
+focused_monitor_set_layout(Layout layout)
 {
     if (focused_monitor->layout != layout) {
         focused_monitor->layout = layout;
@@ -861,7 +869,8 @@ void focused_monitor_set_layout(Layout layout)
     }
 }
 
-void focused_monitor_rotate_clockwise()
+void
+focused_monitor_rotate_clockwise()
 {
     if (! focused_monitor->tail)
         return;
@@ -887,7 +896,8 @@ void focused_monitor_rotate_clockwise()
     xcb_flush(g_xcb);
 }
 
-void focused_monitor_rotate_counter_clockwise()
+void
+focused_monitor_rotate_counter_clockwise()
 {
     if (! focused_monitor->head)
         return;
@@ -914,7 +924,8 @@ void focused_monitor_rotate_counter_clockwise()
 }
 
 /* set this tag and this tag only */
-void focused_monitor_set_tag(int tag)
+void
+focused_monitor_set_tag(int tag)
 {
     focused_monitor->tagset = (1L << (tag - 1));
 
@@ -923,12 +934,13 @@ void focused_monitor_set_tag(int tag)
 
     monitor_render(focused_monitor, GS_UNCHANGED);
     hints_set_monitor(focused_monitor);
-    refresh_bar();
+    refresh_wmstatus();
     xcb_flush(g_xcb);
 }
 
 /* add or remove this tag */
-void focused_monitor_toggle_tag(int tag)
+void
+focused_monitor_toggle_tag(int tag)
 {
     if (focused_monitor->tagset & (1L << (tag - 1)))
         focused_monitor->tagset &= ~(1L << (tag - 1));
@@ -940,11 +952,12 @@ void focused_monitor_toggle_tag(int tag)
 
     monitor_render(focused_monitor, GS_UNCHANGED);
     hints_set_monitor(focused_monitor);
-    refresh_bar();
+    refresh_wmstatus();
     xcb_flush(g_xcb);
 }
 
-void focused_client_kill()
+void
+focused_client_kill()
 {
     if (! focused_client)
         return;
@@ -953,7 +966,8 @@ void focused_client_kill()
     xcb_flush(g_xcb);
 }
 
-void focused_client_toggle_mode()
+void
+focused_client_toggle_mode()
 {
     if (! focused_client)
         return;
@@ -970,7 +984,8 @@ void focused_client_toggle_mode()
 }
 
 /* we swap the content only and keep the list structure */
-void swap(Client *c1, Client *c2) {
+void
+swap(Client *c1, Client *c2) {
     Client t;
 
 #define COPY(c1 , c2)\
@@ -1004,7 +1019,8 @@ void swap(Client *c1, Client *c2) {
 
 #define MOVE_INC 35
 
-void focused_client_move(Direction direction)
+void
+focused_client_move(Direction direction)
 {
     if (! focused_client || focused_client->mode  == MODE_FULLSCREEN)
         return;
@@ -1044,7 +1060,8 @@ void focused_client_move(Direction direction)
     xcb_flush(g_xcb);
 }
 
-void focused_client_to_next_monitor()
+void
+focused_client_to_next_monitor()
 {
     if (! focused_client)
         return;
@@ -1062,7 +1079,8 @@ void focused_client_to_next_monitor()
     }
 }
 
-void focused_client_to_previous_monitor()
+void
+focused_client_to_previous_monitor()
 {
     if (! focused_client)
         return;
@@ -1084,7 +1102,8 @@ void focused_client_to_previous_monitor()
 #define MAIN_SPLIT_MAX .8
 #define MAIN_SPLIT_INC .05
 
-void focused_client_resize(int width, int height)
+void
+focused_client_resize(int width, int height)
 {
     if (! focused_client)
         return;
@@ -1115,7 +1134,8 @@ void focused_client_resize(int width, int height)
 }
 
 /* set this tag and this tag only */
-void focused_client_set_tag(int tag)
+void
+focused_client_set_tag(int tag)
 {
     /* do not change tagset of fullscreen client */
     if (! focused_client || focused_client->mode ==  MODE_FULLSCREEN)
@@ -1135,12 +1155,13 @@ void focused_client_set_tag(int tag)
     monitor_render(focused_monitor, GS_UNCHANGED);
     hints_set_focused(focused_client);
     hints_set_monitor(focused_monitor);
-    refresh_bar();
+    refresh_wmstatus();
     xcb_flush(g_xcb);
 }
 
 /* add or remove this tag */
-void focused_client_toggle_tag(int tag)
+void
+focused_client_toggle_tag(int tag)
 {
     /* do not change tagset of fullscreen client */
     if (! focused_client || focused_client->mode ==  MODE_FULLSCREEN)
@@ -1164,52 +1185,69 @@ void focused_client_toggle_tag(int tag)
 
     hints_set_focused(focused_client);
     hints_set_monitor(focused_monitor);
-    refresh_bar();
+    refresh_wmstatus();
     xcb_flush(g_xcb);
 }
 
 
-int main(int argc, char **argv)
+int
+main(int argc, char **argv)
 {
     static struct option long_options[] = {
-        {"help", no_argument, 0, 'h'},
-        {"version", no_argument, 0, 'v'},
-        {"border-width", required_argument, 0, 'w'},
-        {"normal-color", required_argument, 0, 'n'},
-        {"focused-color", required_argument, 0, 'c'},
-        {"urgent-color", required_argument, 0, 'u'},
-        {"bg-color", required_argument, 0, 'b'},
-        {"fg-color", required_argument, 0, 'f'},
+        {"help",                        no_argument,        0,  'a'},
+        {"version",                     no_argument,        0,  'b'},
+        {"border-width",                required_argument,  0,  'c'},
+        {"normal-color",                required_argument,  0,  'd'},
+        {"focused-color",               required_argument,  0,  'e'},
+        {"urgent-color",                required_argument,  0,  'f'},
+        {"bg-color",                    required_argument,  0,  'g'},
+        {"fg-color",                    required_argument,  0,  'h'},
+        {"bar-bg-color",                required_argument,  0,  'i'},
+        {"bar-fg-color",                required_argument,  0,  'j'},
+        {"bar-selected-tag-bg-color",   required_argument,  0,  'k'},
+        {"bar-selected-tag-fg-color",   required_argument,  0,  'l'},
         {0, 0, 0, 0}};
     int option_index = 0, opt;
 
     setlocale(LC_ALL, "");
 
-    while ((opt = getopt_long(argc, argv, "hvw:n:c:u:b:f:", long_options, &option_index)) != -1) {
+    while ((opt = getopt_long_only(argc, argv, "abc:d:e:f:g:h:i:j:", long_options, &option_index)) != -1) {
         switch (opt) {
-            case 'h':
+            case 'a':
                 usage();
                 break;
-            case 'v':
+            case 'b':
                 version();
                 break;
-            case 'w':
+            case 'c':
                 g_border_width = atoi(optarg);
                 break;
-            case 'n':
+            case 'd':
                 g_normal_color = parse_color(optarg);
                 break;
-            case 'c':
+            case 'e':
                 g_focused_color = parse_color(optarg);
                 break;
-            case 'u':
+            case 'f':
                 g_urgent_color = parse_color(optarg);
                 break;
-            case 'b':
+            case 'g':
                 g_bgcolor = parse_color(optarg);
                 break;
-            case 'f':
+            case 'h':
                 g_fgcolor = parse_color(optarg);
+                break;
+            case 'i':
+                g_bar_bgcolor = parse_color(optarg);
+                break;
+            case 'j':
+                g_bar_fgcolor = parse_color(optarg);
+                break;
+            case 'k':
+                g_bar_selected_tag_bgcolor = parse_color(optarg);
+                break;
+            case 'l':
+                g_bar_selected_tag_fgcolor = parse_color(optarg);
                 break;
             default:
                 usage();
@@ -1241,7 +1279,7 @@ int main(int argc, char **argv)
             INFO("execute: %s.", autostart);
             system(autostart);
         } else {
-            INFO("no mwmrc found.");
+            INFO("no mosaicrc found.");
         }
     }
 #endif
@@ -1250,6 +1288,9 @@ int main(int argc, char **argv)
     INFO("entering main loop.");
     running = 1;
     while (running) {
+        if (xcb_connection_has_error(g_xcb))
+            break;
+
         xcb_generic_event_t *event;
         while ((event = xcb_wait_for_event(g_xcb))) {
             if (! running)
@@ -1276,6 +1317,7 @@ int main(int argc, char **argv)
             on_event(event);
             free(event);
         }
+
     }
 
     bar_close();
